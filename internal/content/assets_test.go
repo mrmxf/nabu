@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // recSink records every Copy call and returns the served URL the real sink would.
 type recSink struct{ copied map[string]string } // publicRel -> url
 
-func (s *recSink) Copy(srcPath, publicRel string) (string, error) {
+func (s *recSink) Copy(_ source.Tree, _, publicRel string) (string, error) {
 	if s.copied == nil {
 		s.copied = map[string]string{}
 	}
@@ -38,7 +40,7 @@ func TestBundleAssetCopy(t *testing.T) {
 		"---\ntitle: Intro\nparams:\n  kind: presentation\n---\n# Intro\n[brief](brief.pdf) ![pic](pic.png)\n")
 
 	sink := &recSink{}
-	courses, err := Load(root, NewGoldmarkRenderer(), Options{Assets: sink})
+	courses, err := Load(source.Disk(root), NewGoldmarkRenderer(), Options{Assets: sink})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -95,7 +97,7 @@ func TestBundleEscapeNotCopied(t *testing.T) {
 		"---\ntitle: S\nparams:\n  kind: presentation\n---\n[up](../secret.go) ![up](../secret.go)\n")
 
 	sink := &recSink{}
-	courses, err := Load(root, NewGoldmarkRenderer(), Options{Assets: sink})
+	courses, err := Load(source.Disk(root), NewGoldmarkRenderer(), Options{Assets: sink})
 	if err != nil {
 		t.Fatal(err)
 	}

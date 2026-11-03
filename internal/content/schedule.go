@@ -1,12 +1,15 @@
 package content
 
 import (
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // LessonSchedule is one lesson's teaching schedule: the `allow-unscheduled` gate
@@ -49,21 +52,25 @@ type scheduleDoc struct {
 // collapsed to a single hyphen when deriving a default session id.
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
-// LoadSchedules reads the lesson-schedules YAML at path and returns the parsed
-// schedules. A missing file is not an error: it returns an empty slice so a
-// deployment without a schedule still seeds cleanly. Each session's ID is filled
-// from a slug of its Name when the author left it empty.
-func LoadSchedules(path string) ([]LessonSchedule, error) {
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+// LoadSchedules reads the lesson-schedules YAML named name inside src and
+// returns the parsed schedules. A missing file (or unset src) is not an error: it
+// returns an empty slice so a deployment without a schedule still seeds cleanly.
+// Each session's ID is filled from a slug of its Name when the author left it
+// empty.
+func LoadSchedules(src source.Tree, name string) ([]LessonSchedule, error) {
+	if src.IsZero() {
+		return nil, nil
+	}
+	data, err := fs.ReadFile(src.FS, name)
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read schedules %q: %w", path, err)
+		return nil, fmt.Errorf("read schedules %s: %w", src.Where(name), err)
 	}
 	var doc scheduleDoc
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, fmt.Errorf("parse schedules %q: %w", path, err)
+		return nil, fmt.Errorf("parse schedules %s: %w", src.Where(name), err)
 	}
 	for i := range doc.LessonSchedules {
 		for j := range doc.LessonSchedules[i].Sessions {

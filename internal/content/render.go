@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"html"
-	"os"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	ghtml "github.com/yuin/goldmark/renderer/html"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // Renderer turns a slide's source Markdown into HTML. Two implementations exist:
@@ -27,7 +28,10 @@ type Renderer interface {
 // RenderContext gives the renderer what it needs to resolve a slide's inline
 // assets (page-bundle-relative images).
 type RenderContext struct {
-	BundleDir string // absolute dir the slide's markdown lives in
+	// Source is the tree the slide was read from; BundleDir and LessonDir are
+	// slash paths inside it. A zero Source means no files are reachable.
+	Source    source.Tree
+	BundleDir string // dir the slide's markdown lives in, relative to Source
 	// LessonDir is the owning lesson's folder — the same as BundleDir for a flat
 	// slide, its parent for a leaf bundle or teacher page. Includes fall back to
 	// it so one _references.md serves every slide in the lesson.
@@ -46,10 +50,10 @@ type RenderContext struct {
 	LmsResolve func(ref string) (url string, ok bool)
 }
 
-// AssetSink copies a slide's bundle asset into the served public tree and
-// returns the URL it will be served at.
+// AssetSink copies a slide's bundle asset (the file rel inside src) into the
+// served public tree under publicRel and returns the URL it will be served at.
 type AssetSink interface {
-	Copy(srcPath, publicRel string) (url string, err error)
+	Copy(src source.Tree, rel, publicRel string) (url string, err error)
 }
 
 // NewRenderer returns the renderer named by `name` ("goldmark" or "hugo").
@@ -220,12 +224,12 @@ func (r *GoldmarkRenderer) rewriteImages(htmlStr string, ctx RenderContext) (str
 		if isRemoteOrAbsolute(src) || !withinBundle(src) || ctx.Assets == nil {
 			return m
 		}
-		abs := filepath.Join(ctx.BundleDir, filepath.FromSlash(src))
-		if _, err := os.Stat(abs); err != nil {
-			issues = append(issues, lmsIssue{StatusWarnings, fmt.Sprintf("image not found: %s", src)})
+		rel := path.Join(ctx.BundleDir, src)
+		if !fileIn(ctx.Source, rel) {
+			issues = append(issues, lmsIssue{StatusWarnings, fmt.Sprintf("image not found: %s", ctx.Source.Where(rel))})
 			return m
 		}
-		url, err := ctx.Assets.Copy(abs, path.Join(ctx.PublicRel, src))
+		url, err := ctx.Assets.Copy(ctx.Source, rel, path.Join(ctx.PublicRel, src))
 		if err != nil {
 			issues = append(issues, lmsIssue{StatusWarnings, fmt.Sprintf("copy image %s: %v", src, err)})
 			return m
@@ -233,6 +237,15 @@ func (r *GoldmarkRenderer) rewriteImages(htmlStr string, ctx RenderContext) (str
 		return parts[1] + url + parts[3]
 	})
 	return out, issues
+}
+
+// fileIn reports whether rel names a regular file inside src.
+func fileIn(src source.Tree, rel string) bool {
+	if src.IsZero() {
+		return false
+	}
+	st, err := fs.Stat(src.FS, rel)
+	return err == nil && st.Mode().IsRegular()
 }
 
 func isRemoteOrAbsolute(src string) bool {
@@ -265,7 +278,7 @@ func (r *GoldmarkRenderer) rewriteLinks(htmlStr string, ctx RenderContext) (stri
 		if !withinBundle(ref) || strings.EqualFold(path.Ext(ref), ".md") {
 			return m // escapes the bundle (a repo cross-reference) or a .md xref
 		}
-		url, issue := copyBundleAsset(ctx.BundleDir, ctx.PublicRel, ref, ctx.Assets)
+		url, issue := copyBundleAsset(ctx.Source, ctx.BundleDir, ctx.PublicRel, ref, ctx.Assets)
 		if issue != nil {
 			issues = append(issues, *issue)
 			return m
@@ -304,15 +317,16 @@ func splitFragment(ref string) (pathPart, frag string) {
 	return ref, ""
 }
 
-// copyBundleAsset copies bundleDir/ref into the public tree under publicRel and
-// returns its served URL. On a missing file or copy error it returns a WARNINGS
-// issue and an empty url. Shared by rewriteLinks and the frontmatter logo copier.
-func copyBundleAsset(bundleDir, publicRel, ref string, assets AssetSink) (string, *lmsIssue) {
-	abs := filepath.Join(bundleDir, filepath.FromSlash(ref))
-	if _, err := os.Stat(abs); err != nil {
-		return "", &lmsIssue{StatusWarnings, fmt.Sprintf("linked file not found: %s", ref)}
+// copyBundleAsset copies bundleDir/ref (inside src) into the public tree under
+// publicRel and returns its served URL. On a missing file or copy error it
+// returns a WARNINGS issue and an empty url. Shared by rewriteLinks and the
+// frontmatter logo copier.
+func copyBundleAsset(src source.Tree, bundleDir, publicRel, ref string, assets AssetSink) (string, *lmsIssue) {
+	rel := path.Join(bundleDir, ref)
+	if !fileIn(src, rel) {
+		return "", &lmsIssue{StatusWarnings, fmt.Sprintf("linked file not found: %s", src.Where(rel))}
 	}
-	url, err := assets.Copy(abs, path.Join(publicRel, ref))
+	url, err := assets.Copy(src, rel, path.Join(publicRel, ref))
 	if err != nil {
 		return "", &lmsIssue{StatusWarnings, fmt.Sprintf("copy file %s: %v", ref, err)}
 	}
@@ -334,7 +348,7 @@ func resolveBundleFile(bundleDir, publicRel, raw string, opts Options) string {
 	if raw == "" || isRemoteOrAbsolute(raw) || !withinBundle(raw) || opts.Assets == nil {
 		return raw
 	}
-	if url, issue := copyBundleAsset(bundleDir, publicRel, raw, opts.Assets); issue == nil {
+	if url, issue := copyBundleAsset(opts.src, bundleDir, publicRel, raw, opts.Assets); issue == nil {
 		return url
 	}
 	return raw

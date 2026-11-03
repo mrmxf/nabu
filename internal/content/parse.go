@@ -2,15 +2,16 @@ package content
 
 import (
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // Options controls a Load: the three numbering patterns and where copied assets
@@ -20,10 +21,10 @@ type Options struct {
 	LessonNumbering string
 	SlideNumbering  string
 	Assets          AssetSink
-	// DataDir is where t_mapper `source` files live (e.g. "assets/data"). When set,
-	// seed-time validation checks each mapper's source file + root key resolve.
-	// Empty (e.g. `admin validate`) skips that filesystem check.
-	DataDir string
+	// Data is the tree t_mapper `source` files live in (the assets tree's data/).
+	// When set, seed-time validation checks each mapper's source file + root key
+	// resolve. The zero Tree (e.g. `admin validate`) skips that check.
+	Data source.Tree
 	// ResolveLmsURL, if set, converts an lms:// reference on a lesson (identified by
 	// its bucket+prefix) into a served URL, returning ok=false to leave the
 	// reference as authored (e.g. storage unconfigured or an unsupported scope).
@@ -36,6 +37,10 @@ type Options struct {
 	// such route — they are only viewable inside a session — so their references
 	// become in-player slide jumps instead. See rewriteXrefLinks.
 	HelpRoot bool
+
+	// src is the tree being loaded, set by Load. Every directory and file path
+	// inside the loader is a slash path relative to its root.
+	src source.Tree
 }
 
 // Default numbering patterns (see docs/user/config.md).
@@ -259,18 +264,23 @@ var (
 // Load walks a Hugo-style content tree and returns the courses it contains,
 // each with rendered slides and resolved numbering + publishing status. It is
 // non-fatal per node: a file that cannot be parsed is recorded with
-// ContentStatus CORRUPT rather than aborting the whole load.
-func Load(dir string, r Renderer, opts Options) ([]Course, error) {
-	entries, err := os.ReadDir(dir)
+// ContentStatus CORRUPT rather than aborting the whole load. The tree may be on
+// disk or embedded; messages name files by src.Where.
+func Load(src source.Tree, r Renderer, opts Options) ([]Course, error) {
+	if src.IsZero() {
+		return nil, fmt.Errorf("load content: no content tree")
+	}
+	opts.src = src
+	entries, err := fs.ReadDir(src.FS, ".")
 	if err != nil {
-		return nil, fmt.Errorf("read content dir %s: %w", dir, err)
+		return nil, fmt.Errorf("read content dir %s: %w", src.Where("."), err)
 	}
 	var courses []Course
 	for _, e := range entries {
 		if !e.IsDir() || IsControlFile(e.Name()) {
 			continue
 		}
-		c, err := loadCourse(filepath.Join(dir, e.Name()), e.Name(), r, opts)
+		c, err := loadCourse(e.Name(), e.Name(), r, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +327,7 @@ func Problems(courses []Course) []Problem {
 
 func loadCourse(dir, slug string, r Renderer, opts Options) (Course, error) {
 	c := Course{Slug: slug, Title: slug}
-	fm, status, issue := parseIndex(filepath.Join(dir, "_index.md"))
+	fm, status, issue := parseIndex(opts.src, path.Join(dir, "_index.md"))
 	c.Content = status
 	c.Issue = issue
 	if status != StatusCorrupt {
@@ -341,9 +351,9 @@ func loadCourse(dir, slug string, r Renderer, opts Options) (Course, error) {
 	}
 	c.Readiness, c.GoLive = resolveReadiness(fm.Params.Readiness)
 
-	entries, err := os.ReadDir(dir)
+	entries, err := fs.ReadDir(opts.src.FS, dir)
 	if err != nil {
-		return c, fmt.Errorf("read course dir %s: %w", dir, err)
+		return c, fmt.Errorf("read course dir %s: %w", opts.src.Where(dir), err)
 	}
 	for _, e := range entries {
 		// Directories only, and never a control directory: a "_"-prefixed folder
@@ -352,7 +362,7 @@ func loadCourse(dir, slug string, r Renderer, opts Options) (Course, error) {
 		if !e.IsDir() || IsControlFile(e.Name()) {
 			continue
 		}
-		l, err := loadLesson(filepath.Join(dir, e.Name()), c.Slug, e.Name(), r, opts)
+		l, err := loadLesson(path.Join(dir, e.Name()), c.Slug, e.Name(), r, opts)
 		if err != nil {
 			return c, err
 		}
@@ -363,8 +373,8 @@ func loadCourse(dir, slug string, r Renderer, opts Options) (Course, error) {
 }
 
 func loadLesson(dir, courseSlug, slug string, r Renderer, opts Options) (Lesson, error) {
-	l := Lesson{Slug: slug, Title: slug}
-	fm, status, issue := parseIndex(filepath.Join(dir, "_index.md"))
+	l := Lesson{Slug: slug, Title: slug, Source: opts.src.Where(dir)}
+	fm, status, issue := parseIndex(opts.src, path.Join(dir, "_index.md"))
 	l.Content = status
 	l.Issue = issue
 	if status != StatusCorrupt {
@@ -391,9 +401,9 @@ func loadLesson(dir, courseSlug, slug string, r Renderer, opts Options) (Lesson,
 	}
 	l.Readiness, l.GoLive = resolveReadiness(fm.Params.Readiness)
 
-	entries, err := os.ReadDir(dir)
+	entries, err := fs.ReadDir(opts.src.FS, dir)
 	if err != nil {
-		return l, fmt.Errorf("read lesson dir %s: %w", dir, err)
+		return l, fmt.Errorf("read lesson dir %s: %w", opts.src.Where(dir), err)
 	}
 	for _, e := range entries {
 		name := e.Name()
@@ -405,14 +415,14 @@ func loadLesson(dir, courseSlug, slug string, r Renderer, opts Options) (Lesson,
 			continue
 		case e.IsDir():
 			// leaf bundle: <slide>/index.md
-			idx := filepath.Join(dir, name, "index.md")
-			if _, err := os.Stat(idx); err != nil {
+			idx := path.Join(dir, name, "index.md")
+			if _, err := fs.Stat(opts.src.FS, idx); err != nil {
 				continue
 			}
-			l.Slides = append(l.Slides, loadSlide(idx, filepath.Join(dir, name), dir, courseSlug, l.Slug, name, l.Bucket, l.Prefix, r, opts))
+			l.Slides = append(l.Slides, loadSlide(idx, path.Join(dir, name), dir, courseSlug, l.Slug, name, l.Bucket, l.Prefix, r, opts))
 		case strings.HasSuffix(name, ".md"):
 			base := strings.TrimSuffix(name, ".md")
-			l.Slides = append(l.Slides, loadSlide(filepath.Join(dir, name), dir, dir, courseSlug, l.Slug, base, l.Bucket, l.Prefix, r, opts))
+			l.Slides = append(l.Slides, loadSlide(path.Join(dir, name), dir, dir, courseSlug, l.Slug, base, l.Bucket, l.Prefix, r, opts))
 		}
 	}
 	sort.SliceStable(l.Slides, func(i, j int) bool { return l.Slides[i].Order < l.Slides[j].Order })
@@ -436,8 +446,8 @@ func loadTeacherPages(lessonDir, courseSlug, lessonSlug, bucket, prefix string, 
 	sort.Strings(keys)
 	out := make([]TeacherPage, 0, len(keys))
 	for _, key := range keys {
-		mdPath := filepath.Join(lessonDir, filepath.FromSlash(pages[key]))
-		s := loadSlide(mdPath, filepath.Dir(mdPath), lessonDir, courseSlug, lessonSlug, key, bucket, prefix, r, opts)
+		mdPath := path.Join(lessonDir, pages[key])
+		s := loadSlide(mdPath, path.Dir(mdPath), lessonDir, courseSlug, lessonSlug, key, bucket, prefix, r, opts)
 		out = append(out, TeacherPage{Key: key, Slide: s})
 	}
 	return out
@@ -459,9 +469,10 @@ func loadSlide(mdPath, bundleDir, lessonDir, courseSlug, lessonSlug, nameBase, b
 	s := Slide{Slug: defSlug, Order: order, Title: defSlug,
 		status: status{Content: StatusOK, Readiness: "DRAFT"}}
 
-	raw, err := os.ReadFile(mdPath)
+	raw, err := fs.ReadFile(opts.src.FS, mdPath)
 	if err != nil {
 		s.Content = StatusCorrupt
+		s.Issue = "cannot read " + opts.src.Where(mdPath)
 		return s
 	}
 	fm, body, ferr := parseFrontmatter(raw)
@@ -491,6 +502,7 @@ func loadSlide(mdPath, bundleDir, lessonDir, courseSlug, lessonSlug, nameBase, b
 	s.Title = pickTitle(fm.Title, body, s.Slug)
 
 	ctx := RenderContext{
+		Source:     opts.src,
 		BundleDir:  bundleDir,
 		LessonDir:  lessonDir,
 		PublicRel:  path.Join("content", courseSlug, lessonSlug, s.Slug),
@@ -519,7 +531,7 @@ func loadSlide(mdPath, bundleDir, lessonDir, courseSlug, lessonSlug, nameBase, b
 	worst = worseStatus(worst, qSt)
 	s.Issue = appendIssue(s.Issue, qMsg)
 	normalizeQuizGroups(s.QuizGroups)
-	mSt, mMsg := validateDataMappers(s.DataMappers, opts.DataDir)
+	mSt, mMsg := validateDataMappers(s.DataMappers, opts.Data)
 	worst = worseStatus(worst, mSt)
 	s.Issue = appendIssue(s.Issue, mMsg)
 	tSt, tMsg := validateTimers(s.Timers)
@@ -574,10 +586,10 @@ func assignNumbers(courses []Course, opts Options) {
 	}
 }
 
-// parseIndex reads a branch _index.md, tolerating a missing file (returns zero
-// frontmatter + OK) and reporting CORRUPT for an unparseable one.
-func parseIndex(mdPath string) (frontmatter, ContentStatus, string) {
-	raw, err := os.ReadFile(mdPath)
+// parseIndex reads a branch _index.md from src, tolerating a missing file
+// (returns zero frontmatter + OK) and reporting CORRUPT for an unparseable one.
+func parseIndex(src source.Tree, mdPath string) (frontmatter, ContentStatus, string) {
+	raw, err := fs.ReadFile(src.FS, mdPath)
 	if err != nil {
 		return frontmatter{}, StatusOK, "" // no _index.md is fine; defaults apply
 	}
@@ -734,7 +746,7 @@ func resolveChoiceScopes(l *Lesson) {
 // root present), doesn't shadow a reserved print key, and — when dataDir is set
 // (seed) — that its source file exists and its root key resolves. A bad source or
 // root is an ERROR (author bug worth failing the seed on).
-func validateDataMappers(ms []DataMapper, dataDir string) (ContentStatus, string) {
+func validateDataMappers(ms []DataMapper, data source.Tree) (ContentStatus, string) {
 	worst := StatusOK
 	var msg string
 	for _, m := range ms {
@@ -747,13 +759,13 @@ func validateDataMappers(ms []DataMapper, dataDir string) (ContentStatus, string
 			worst = worseStatus(worst, StatusWarnings)
 			msg = appendIssue(msg, fmt.Sprintf("t_mapper id %q shadows a built-in print value (username|email|group|session); pick another id", m.ID))
 		}
-		if dataDir == "" {
+		if data.IsZero() {
 			continue // no filesystem check (e.g. admin validate)
 		}
-		raw, err := os.ReadFile(filepath.Join(dataDir, filepath.FromSlash(m.Source)))
+		raw, err := fs.ReadFile(data.FS, path.Clean(m.Source))
 		if err != nil {
 			worst = worseStatus(worst, StatusErrors)
-			msg = appendIssue(msg, fmt.Sprintf("t_mapper %q: source %q not found under the data dir", m.ID, m.Source))
+			msg = appendIssue(msg, fmt.Sprintf("t_mapper %q: source %q not found at %s", m.ID, m.Source, data.Where(m.Source)))
 			continue
 		}
 		var doc map[string]any

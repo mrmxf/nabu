@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // TestLoadSchedules parses the corrected YAML shape (sessions as a sibling of
@@ -39,7 +41,7 @@ lesson-schedules:
 		t.Fatalf("write temp yaml: %v", err)
 	}
 
-	schedules, err := LoadSchedules(path)
+	schedules, err := LoadSchedules(source.Disk(dir), "lesson-schedules.yaml")
 	if err != nil {
 		t.Fatalf("LoadSchedules: %v", err)
 	}
@@ -71,7 +73,7 @@ lesson-schedules:
 
 // TestLoadSchedulesMissingFile confirms an absent file is not an error.
 func TestLoadSchedulesMissingFile(t *testing.T) {
-	schedules, err := LoadSchedules(filepath.Join(t.TempDir(), "nope.yaml"))
+	schedules, err := LoadSchedules(source.Disk(t.TempDir()), "nope.yaml")
 	if err != nil {
 		t.Fatalf("missing file should not error: %v", err)
 	}

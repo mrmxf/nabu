@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // writeLesson lays out a minimal lesson on disk and returns its dir.
@@ -31,7 +33,7 @@ func TestIncludeResolvesReferenceLinks(t *testing.T) {
 	})
 	src := "Try [Zapier][zapier] and [n8n][n8n].\n\n{{< LMS t=\"include\" from=\"_references.md\" >}}\n"
 
-	out, _, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: dir, LessonDir: dir})
+	out, _, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(dir), BundleDir: ".", LessonDir: "."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +56,9 @@ func TestIncludeFallsBackToLessonDir(t *testing.T) {
 		"_references.md":   "[a]: https://example.com/a\n",
 		"my-slide/keep.md": "unused",
 	})
-	bundle := filepath.Join(lesson, "my-slide")
 	src := "See [A][a].\n\n{{< LMS t=\"include\" from=\"_references.md\" >}}\n"
 
-	out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: bundle, LessonDir: lesson})
+	out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(lesson), BundleDir: "my-slide", LessonDir: "."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestIncludeOnlyFiltersKeys(t *testing.T) {
 	})
 	src := "[A][a] [B][b]\n\n{{< LMS t=\"include\" from=\"_references.md\" only=\"a\" >}}\n"
 
-	out, _, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: dir, LessonDir: dir})
+	out, _, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(dir), BundleDir: ".", LessonDir: "."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +96,7 @@ func TestIncludeMissingFileWarns(t *testing.T) {
 	dir := t.TempDir()
 	src := "text\n\n{{< LMS t=\"include\" from=\"_nope.md\" >}}\n"
 
-	out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: dir, LessonDir: dir})
+	out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(dir), BundleDir: ".", LessonDir: "."})
 	if err != nil {
 		t.Fatalf("a missing include must not be fatal: %v", err)
 	}
@@ -120,7 +121,7 @@ func TestIncludeRefusesEscape(t *testing.T) {
 	}
 	for _, from := range []string{"../secret.md", "/etc/hostname"} {
 		src := "{{< LMS t=\"include\" from=\"" + from + "\" >}}\n"
-		out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: dir, LessonDir: dir})
+		out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(dir), BundleDir: ".", LessonDir: "."})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,7 +142,7 @@ func TestIncludeDoesNotNest(t *testing.T) {
 	})
 	src := "{{< LMS t=\"include\" from=\"_loop.md\" >}}\n"
 
-	out, _, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: dir, LessonDir: dir})
+	out, _, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(dir), BundleDir: ".", LessonDir: "."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,7 @@ func TestIncludeInCodeFenceStaysLiteral(t *testing.T) {
 	dir := writeLesson(t, map[string]string{"_references.md": "[a]: https://example.com/a\n"})
 	src := "```\n{{< LMS t=\"include\" from=\"_references.md\" >}}\n```\n"
 
-	out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{BundleDir: dir, LessonDir: dir})
+	out, issues, err := NewGoldmarkRenderer().Render(src, RenderContext{Source: source.Disk(dir), BundleDir: ".", LessonDir: "."})
 	if err != nil {
 		t.Fatal(err)
 	}

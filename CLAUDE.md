@@ -80,6 +80,15 @@ scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh
 - Test library behaviour from an external module too (`replace` to this repo), from an
   empty directory: no course files on disk. See claude-build.md.
 
+### Sources and logs
+- Read course files only through `source.Tree` (`internal/source`): `fs.ReadFile`,
+  `fs.ReadDir`, `fs.Stat` on `tree.FS`, with slash paths relative to the tree root.
+  Never `os.*` or `filepath.Join` inside the loader.
+- Name files in logs and content issues with `tree.Where(rel)`: an absolute disk path,
+  or `embed://<tree>/…` for a tree baked into the binary.
+- `embed://` is a LABEL, never a path to open. Do not invent `/embed/…` paths: they read
+  like real directories and can collide with one.
+
 ### Config
 - The embedded `embedfs/nabu-config.yaml` holds defaults. A course overrides with
   `nabu.yaml`, found via `-c <file>`, `-C/--course-dir <dir>`, or `./nabu.yaml`.

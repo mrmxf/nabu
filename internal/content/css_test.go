@@ -4,16 +4,18 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // cssSink records what was copied into the public tree.
 type cssSink struct{ copied map[string]string }
 
-func (s *cssSink) Copy(srcPath, publicRel string) (string, error) {
+func (s *cssSink) Copy(src source.Tree, rel, publicRel string) (string, error) {
 	if s.copied == nil {
 		s.copied = map[string]string{}
 	}
-	s.copied[publicRel] = srcPath
+	s.copied[publicRel] = src.Where(rel)
 	return "/" + publicRel, nil
 }
 
@@ -48,7 +50,7 @@ func TestCourseAndLessonCSSResolved(t *testing.T) {
 		"mycourse/lesson-b/10-slide.md": "---\ntitle: B slide\n---\nbody\n",
 	})
 	sink := &cssSink{}
-	courses, err := Load(root, NewGoldmarkRenderer(), Options{Assets: sink})
+	courses, err := Load(source.Disk(root), NewGoldmarkRenderer(), Options{Assets: sink})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +95,7 @@ func TestControlFilesAreNotContent(t *testing.T) {
 		"mycourse/lesson-a/10-real.md":     "---\ntitle: Real slide\n---\nbody\n",
 		"_scratch/_index.md":               "---\ntitle: Not a course\n---\n",
 	})
-	courses, err := Load(root, NewGoldmarkRenderer(), Options{})
+	courses, err := Load(source.Disk(root), NewGoldmarkRenderer(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,44 +8,43 @@ package assetpipe
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/fs"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
-// Build walks srcDir (e.g. "assets") and publishes it under dstDir (e.g.
+// Build walks the assets tree src and publishes it under dstDir (e.g.
 // pb_public): *.yaml/*.yml become pretty *.json; everything else is copied as-is.
-// A missing srcDir is not an error (assets are optional).
-func Build(srcDir, dstDir string) error {
-	info, err := os.Stat(srcDir)
-	if err != nil || !info.IsDir() {
-		slog.Debug("assetpipe: no assets dir; skipping", "dir", srcDir)
+// A missing tree is not an error (assets are optional).
+func Build(src source.Tree, dstDir string) error {
+	if !src.Exists() {
+		slog.Debug("assetpipe: no assets tree; skipping", "source", src.Label)
 		return nil
 	}
 	count := 0
-	err = filepath.WalkDir(srcDir, func(path string, d os.DirEntry, walkErr error) error {
+	err := fs.WalkDir(src.FS, ".", func(rel string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if d.IsDir() {
 			return nil
 		}
-		rel, err := filepath.Rel(srcDir, path)
-		if err != nil {
-			return err
-		}
-		switch strings.ToLower(filepath.Ext(rel)) {
+		ext := path.Ext(rel)
+		switch strings.ToLower(ext) {
 		case ".yaml", ".yml":
-			dst := filepath.Join(dstDir, strings.TrimSuffix(rel, filepath.Ext(rel))+".json")
-			if err := convertYAML(path, dst); err != nil {
+			dst := filepath.Join(dstDir, filepath.FromSlash(strings.TrimSuffix(rel, ext)+".json"))
+			if err := convertYAML(src, rel, dst); err != nil {
 				return err
 			}
 		default:
-			if err := copyFile(path, filepath.Join(dstDir, rel)); err != nil {
+			if err := src.CopyTo(rel, filepath.Join(dstDir, filepath.FromSlash(rel))); err != nil {
 				return err
 			}
 		}
@@ -55,45 +54,28 @@ func Build(srcDir, dstDir string) error {
 	if err != nil {
 		return err
 	}
-	slog.Info("assetpipe built", "src", srcDir, "dst", dstDir, "files", count)
+	slog.Info("assetpipe built", "source", src.Label, "dst", dstDir, "files", count)
 	return nil
 }
 
-// convertYAML parses a YAML file and writes it as indented JSON (yaml.v3 decodes
-// mappings to map[string]any, so encoding/json handles the result directly).
-func convertYAML(src, dst string) error {
-	raw, err := os.ReadFile(src)
+// convertYAML parses the YAML file rel in src and writes it to dst as indented
+// JSON (yaml.v3 decodes mappings to map[string]any, so encoding/json handles the
+// result directly).
+func convertYAML(src source.Tree, rel, dst string) error {
+	raw, err := fs.ReadFile(src.FS, rel)
 	if err != nil {
-		return err
+		return fmt.Errorf("assetpipe read %s: %w", src.Where(rel), err)
 	}
 	var v any
 	if err := yaml.Unmarshal(raw, &v); err != nil {
-		return fmt.Errorf("assetpipe parse %s: %w", src, err)
+		return fmt.Errorf("assetpipe parse %s: %w", src.Where(rel), err)
 	}
 	out, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return fmt.Errorf("assetpipe marshal %s: %w", src, err)
+		return fmt.Errorf("assetpipe marshal %s: %w", src.Where(rel), err)
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
 	return os.WriteFile(dst, append(out, '\n'), 0o644)
-}
-
-func copyFile(src, dst string) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
 }

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // demoTree is a small, stable fixture course (testdata/course) shaped like a real
@@ -14,7 +16,7 @@ const demoTree = "testdata/course"
 
 func loadDemo(t *testing.T) []Course {
 	t.Helper()
-	courses, err := Load(demoTree, NewGoldmarkRenderer(), Options{})
+	courses, err := Load(source.Disk(demoTree), NewGoldmarkRenderer(), Options{})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -378,7 +380,7 @@ func TestWidgetCatalogueTypes(t *testing.T) {
 // TestHelpAudiencesResolved loads the real help tree and asserts inheritance filled
 // every lesson/slide with a valid audience, and nothing is broken.
 func TestHelpAudiencesResolved(t *testing.T) {
-	courses, err := Load("../../help", NewGoldmarkRenderer(), Options{})
+	courses, err := Load(source.Disk("../../help"), NewGoldmarkRenderer(), Options{})
 	if err != nil {
 		t.Fatalf("Load help: %v", err)
 	}
@@ -416,7 +418,7 @@ func TestProblemsReportsCorruptWithReason(t *testing.T) {
 	mk("tc/_index.md", "---\ntitle: TC\nparams:\n  readiness: production\n---\n")
 	mk("tc/bad/_index.md", "---\ntitle: Bad\nparams:\n  summary: one\n  summary: two\n---\n")
 
-	courses, err := Load(tmp, NewGoldmarkRenderer(), Options{})
+	courses, err := Load(source.Disk(tmp), NewGoldmarkRenderer(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

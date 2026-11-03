@@ -54,7 +54,10 @@ Settings that the SPA needs are seeded into the `app_config` collection by `seed
 
 - Idempotent. Runs pending migrations first, so a brand-new `pb_data` works in one step.
 - Refuses while a server is running (pid file in `pb_data`); `--force` overrides.
-- Help is extracted from the embedded `help.FS` to a temp dir unless `--help-content`.
+- Every tree is a `source.Tree`: a disk dir (labelled with its absolute path) or a tree
+  baked into the binary (labelled `embed://content`, `embed://assets`, `embed://help`).
+  Help is `embed://help` unless `--help-content`. Seed logs one `seed sources` line, and
+  each `seeded lesson` line carries `source=`.
 - Demo accounts come from `course.demo_roster`, else `internal/demo/demo_mode.yaml`
   (neutral, enrolled in no course). Only with `demo_mode: true`.
 - A superuser roster entry needs its `password_env` set, or it is skipped.

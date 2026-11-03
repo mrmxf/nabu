@@ -3,6 +3,8 @@ package content
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // TestDataMapperParseValidate covers t_mapper parsing and the seed-time source/root
@@ -23,7 +25,7 @@ func TestDataMapperParseValidate(t *testing.T) {
 
 	load := func(mapper string) Slide {
 		write(t, filepath.Join(cls, "10-s.md"), slide(mapper))
-		courses, err := Load(filepath.Join(root, "tree"), NewGoldmarkRenderer(), Options{DataDir: dataDir})
+		courses, err := Load(source.Disk(filepath.Join(root, "tree")), NewGoldmarkRenderer(), Options{Data: source.Disk(dataDir)})
 		if err != nil {
 			t.Fatal(err)
 		}

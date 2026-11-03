@@ -9,10 +9,8 @@ package seed
 
 import (
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -29,6 +27,7 @@ import (
 	"github.com/mrmxf/nabu/internal/lmsfs"
 	"github.com/mrmxf/nabu/internal/s3svc"
 	"github.com/mrmxf/nabu/internal/serverctl"
+	"github.com/mrmxf/nabu/internal/source"
 	"github.com/mrmxf/nabu/internal/students"
 )
 
@@ -119,6 +118,53 @@ func NewCommand(app core.App, src Sources) *cobra.Command {
 	return cmd
 }
 
+// seedTrees are the trees one seed reads, each labelled with where it came from.
+type seedTrees struct {
+	content, assets, help source.Tree
+	// schedules is the tree holding the schedules file schedulesName.
+	schedules     source.Tree
+	schedulesName string
+}
+
+// resolveTrees picks each tree by precedence: an explicit path (flag), then a
+// tree embedded via src, then the course config's path. Help defaults to the
+// help embedded in the binary. An embedded course carries its schedules at the
+// root of its content tree.
+func resolveTrees(p Paths, src Sources, cp Paths) seedTrees {
+	pick := func(flag string, embedded fs.FS, name, configured string) source.Tree {
+		switch {
+		case flag != "":
+			return source.Disk(flag)
+		case embedded != nil:
+			return source.Embed(embedded, name)
+		default:
+			return source.Disk(configured)
+		}
+	}
+	t := seedTrees{
+		content: pick(p.Content, src.Content, "content", cp.Content),
+		assets:  pick(p.Assets, src.Assets, "assets", cp.Assets),
+	}
+	switch {
+	case p.Help != "":
+		t.help = source.Disk(p.Help)
+	case src.Help != nil:
+		t.help = source.Embed(src.Help, "help")
+	default:
+		t.help = source.Embed(help.FS, "help")
+	}
+	schedules := p.Schedules
+	if schedules == "" && p.Content == "" && src.Content != nil {
+		t.schedules, t.schedulesName = t.content, "lesson-schedules.yaml"
+		return t
+	}
+	if schedules == "" {
+		schedules = cp.Schedules
+	}
+	t.schedules, t.schedulesName = source.Disk(filepath.Dir(schedules)), filepath.Base(schedules)
+	return t
+}
+
 // Run performs the idempotent seed. Empty fields of p are filled from src (trees
 // embedded in a library build), then from the course config's paths; the help
 // falls back to the help embedded in the binary.
@@ -130,56 +176,9 @@ func Run(app core.App, p Paths, src Sources, renderer string, strict bool) error
 	if renderer == "" {
 		renderer = defaultRenderer
 	}
-	// extract materialises an embedded tree on disk for the path-based loader.
-	var cleanups []func()
-	defer func() {
-		for _, c := range cleanups {
-			c()
-		}
-	}()
-	extract := func(fsys fs.FS, what string) (string, error) {
-		dir, cleanup, err := extractFS(fsys, what)
-		if err != nil {
-			return "", err
-		}
-		cleanups = append(cleanups, cleanup)
-		return dir, nil
-	}
-	if p.Content == "" && src.Content != nil {
-		if p.Content, err = extract(src.Content, "content"); err != nil {
-			return err
-		}
-		// an embedded course carries its schedules at the tree root, if at all
-		if p.Schedules == "" {
-			if s := filepath.Join(p.Content, "lesson-schedules.yaml"); fileExists(s) {
-				p.Schedules = s
-			}
-		}
-	}
-	if p.Assets == "" && src.Assets != nil {
-		if p.Assets, err = extract(src.Assets, "assets"); err != nil {
-			return err
-		}
-	}
-	if p.Help == "" {
-		helpFS := src.Help
-		if helpFS == nil {
-			helpFS = help.FS
-		}
-		if p.Help, err = extract(helpFS, "help"); err != nil {
-			return err
-		}
-	}
-	if p.Content == "" {
-		p.Content = cp.Content
-	}
-	if p.Assets == "" {
-		p.Assets = cp.Assets
-	}
-	if p.Schedules == "" {
-		p.Schedules = cp.Schedules
-	}
-	contentDir, helpDir, schedulesPath := p.Content, p.Help, p.Schedules
+	trees := resolveTrees(p, src, cp)
+	slog.Info("seed sources", "content", trees.content.Label, "assets", trees.assets.Label,
+		"help", trees.help.Label, "schedules", trees.schedules.Where(trees.schedulesName))
 
 	// Apply any pending schema migrations first, so seeding a brand-new data dir
 	// works in one step (the collections it writes to must exist). Idempotent — a
@@ -198,15 +197,15 @@ func Run(app core.App, p Paths, src Sources, renderer string, strict bool) error
 	// PocketBase's first-run "create your first superuser" page at /_/.
 	demoMode := demoModeEnabled()
 	if err := ingestContent(app, []contentRoot{
-		{dir: contentDir},
-		{dir: helpDir, help: true},
-	}, p.Assets, renderer, strict); err != nil {
+		{tree: trees.content},
+		{tree: trees.help, help: true},
+	}, trees.assets, renderer, strict); err != nil {
 		return err
 	}
 
 	// publish the Hugo-style assets tree (assets/** -> pb_public/**, yaml->json)
 	// so t_mapper data files are served, e.g. assets/data/x.yaml -> /data/x.json.
-	if err := assetpipe.Build(p.Assets, publicDir(app.DataDir())); err != nil {
+	if err := assetpipe.Build(trees.assets, publicDir(app.DataDir())); err != nil {
 		return fmt.Errorf("assets pipeline: %w", err)
 	}
 
@@ -217,7 +216,7 @@ func Run(app core.App, p Paths, src Sources, renderer string, strict bool) error
 
 	// seed teacher-authored lesson schedules (lessons now exist). Additive: rows a
 	// teacher later adds in the dashboard are never pruned by a re-seed.
-	if err := seedSchedules(app, schedulesPath); err != nil {
+	if err := seedSchedules(app, trees.schedules, trees.schedulesName); err != nil {
 		return err
 	}
 
@@ -280,8 +279,8 @@ func seedDemoAccounts(app core.App, demoMode bool) error {
 // rows are keyed by the stable ids (lesson slug, and (schedule, sched_id)) so a
 // re-seed updates in place and never deletes sessions a teacher added by hand. A
 // schedule whose lesson slug matches no lesson is WARNed and skipped.
-func seedSchedules(app core.App, path string) error {
-	schedules, err := content.LoadSchedules(path)
+func seedSchedules(app core.App, tree source.Tree, name string) error {
+	schedules, err := content.LoadSchedules(tree, name)
 	if err != nil {
 		return fmt.Errorf("load schedules: %w", err)
 	}
@@ -362,12 +361,12 @@ func setScheduleDate(rec *core.Record, field, value string) {
 // which — unlike an authored course — has a static, guest-viewable route, so its
 // cross-reference links render as real URLs (see content.Options.HelpRoot).
 type contentRoot struct {
-	dir  string
+	tree source.Tree
 	help bool
 }
 
-// assetsDir is the course assets tree; t_mapper data files resolve under its data/.
-func ingestContent(app core.App, roots []contentRoot, assetsDir, renderer string, strict bool) error {
+// assets is the course assets tree; t_mapper data files resolve under its data/.
+func ingestContent(app core.App, roots []contentRoot, assets source.Tree, renderer string, strict bool) error {
 	r, err := content.NewRenderer(renderer)
 	if err != nil {
 		return err
@@ -389,21 +388,18 @@ func ingestContent(app core.App, roots []contentRoot, assetsDir, renderer string
 	}
 	var probs []content.Problem
 	for _, root := range roots {
-		if root.dir == "" {
+		if !root.tree.Exists() {
+			slog.Warn("content root not found; skipping", "source", root.tree.Label)
 			continue
 		}
-		if _, err := os.Stat(root.dir); err != nil {
-			slog.Warn("content root not found; skipping", "dir", root.dir)
-			continue
-		}
-		courses, err := content.Load(root.dir, r, content.Options{
+		courses, err := content.Load(root.tree, r, content.Options{
 			Assets:        sink,
-			DataDir:       filepath.Join(assetsDir, "data"),
+			Data:          assets.Sub("data"),
 			ResolveLmsURL: resolveLms,
 			HelpRoot:      root.help,
 		})
 		if err != nil {
-			return fmt.Errorf("load content %s: %w", root.dir, err)
+			return fmt.Errorf("load content %s: %w", root.tree.Label, err)
 		}
 		probs = append(probs, content.Problems(courses)...)
 		for _, c := range courses {
@@ -423,7 +419,7 @@ func ingestContent(app core.App, roots []contentRoot, assetsDir, renderer string
 					return err
 				}
 				slog.Info("seeded lesson", "course", c.Slug, "lesson", l.Slug,
-					"slides", len(l.Slides), "teacher_pages", len(l.TeacherPages))
+					"slides", len(l.Slides), "teacher_pages", len(l.TeacherPages), "source", l.Source)
 			}
 		}
 	}
@@ -700,59 +696,9 @@ func publicDir(dataDir string) string {
 // the URL (/<publicRel>) the SPA serves them from.
 type fileAssetSink struct{ publicDir string }
 
-func (s *fileAssetSink) Copy(srcPath, publicRel string) (string, error) {
-	dst := filepath.Join(s.publicDir, filepath.FromSlash(publicRel))
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return "", err
-	}
-	in, err := os.Open(srcPath)
-	if err != nil {
-		return "", err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return "", err
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, in); err != nil {
+func (s *fileAssetSink) Copy(src source.Tree, rel, publicRel string) (string, error) {
+	if err := src.CopyTo(rel, filepath.Join(s.publicDir, filepath.FromSlash(publicRel))); err != nil {
 		return "", err
 	}
 	return "/" + publicRel, nil
-}
-
-// fileExists reports whether path names an existing regular file.
-func fileExists(path string) bool {
-	st, err := os.Stat(path)
-	return err == nil && st.Mode().IsRegular()
-}
-
-// extractFS writes an embedded tree to a temporary directory so the path-based
-// content loader can ingest it, and returns that directory plus a cleanup func
-// that removes it. what names the tree in errors and the temp dir.
-func extractFS(fsys fs.FS, what string) (string, func(), error) {
-	dir, err := os.MkdirTemp("", "nabu-"+what+"-")
-	if err != nil {
-		return "", nil, fmt.Errorf("embedded %s: %w", what, err)
-	}
-	cleanup := func() { _ = os.RemoveAll(dir) }
-	err = fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dir, filepath.FromSlash(p))
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		data, err := fs.ReadFile(fsys, p)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, 0o644)
-	})
-	if err != nil {
-		cleanup()
-		return "", nil, fmt.Errorf("extract embedded %s: %w", what, err)
-	}
-	return dir, cleanup, nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/mrmxf/nabu/embedfs"
 	"github.com/mrmxf/nabu/internal/content"
 	"github.com/mrmxf/nabu/internal/s3svc"
+	"github.com/mrmxf/nabu/internal/source"
 )
 
 // severity is the outcome of one validation check. Ordered so the worst seen
@@ -195,7 +196,7 @@ func checkContent(v *validator, dir string) []content.Course {
 		v.record(sevFail, "content renderer", "err", err)
 		return nil
 	}
-	courses, err := content.Load(dir, r, content.Options{})
+	courses, err := content.Load(source.Disk(dir), r, content.Options{})
 	if err != nil {
 		v.record(sevFail, "content load", "dir", dir, "err", err)
 		return nil

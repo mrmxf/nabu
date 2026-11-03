@@ -2,7 +2,8 @@ package content
 
 import (
 	"fmt"
-	"os"
+	"io/fs"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -88,20 +89,20 @@ func readPartial(ctx RenderContext, from string) (string, error) {
 	if filepath.IsAbs(from) || !withinBundle(from) {
 		return "", fmt.Errorf("%q must be a relative path inside the lesson", from)
 	}
-	candidates := []string{}
-	if ctx.BundleDir != "" {
-		candidates = append(candidates, filepath.Join(ctx.BundleDir, filepath.FromSlash(from)))
+	if ctx.Source.IsZero() {
+		return "", fmt.Errorf("file not found: %s (no content tree)", from)
 	}
-	if ctx.LessonDir != "" && ctx.LessonDir != ctx.BundleDir {
-		candidates = append(candidates, filepath.Join(ctx.LessonDir, filepath.FromSlash(from)))
+	candidates := []string{path.Join(ctx.BundleDir, from)}
+	if ctx.LessonDir != ctx.BundleDir {
+		candidates = append(candidates, path.Join(ctx.LessonDir, from))
 	}
 	for _, p := range candidates {
-		b, err := os.ReadFile(p)
+		b, err := fs.ReadFile(ctx.Source.FS, p)
 		if err == nil {
 			return strings.TrimRight(string(b), "\n"), nil
 		}
 	}
-	return "", fmt.Errorf("file not found: %s", from)
+	return "", fmt.Errorf("file not found: %s", ctx.Source.Where(candidates[0]))
 }
 
 // filterLinkDefs keeps only the named link reference definitions, for a slide

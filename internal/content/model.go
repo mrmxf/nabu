@@ -68,6 +68,9 @@ type Course struct {
 
 // Lesson is one teaching unit inside a course; an ordered set of slides.
 type Lesson struct {
+	// Source names where the lesson was read from, for logs: a disk path or an
+	// embed:// label (see internal/source).
+	Source  string
 	Slug    string
 	Title   string
 	Order   int

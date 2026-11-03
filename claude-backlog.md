@@ -13,7 +13,7 @@ Severity: **B** blocking / incorrect output · **M** moderate debt · **C** cosm
 | M-03 | `help/.../11-agent-deploy.md`, `troubleshooting-agents.md`, `docs/image-server-setup.md` | Reference Tailscale ACL/tags/hosts templates and systemd/start scripts marked "not yet in this repo". They belong in `deploy/`. |
 | M-04 | `internal/deploy`, `internal/assets` | The snapshot/install blob is to be retired in favour of containers. |
 | M-05 | `docs/user/deploy.md`, `help/.../02-first-deploy.md`, `03-laptop-deploy.md` | Describe the scp + Caddy + blob flow. Rewrite around containers. |
-| M-06 | `internal/content`, `internal/seed` | `content.Load` reads paths, so embedded help, content and assets (`nabu.Options`) are extracted to temp dirs at seed (`seed.extractFS`). Move the loader to `fs.FS` to drop the extraction. |
+| ~~M-06~~ | `internal/content`, `internal/seed` | FIXED 2026-11-03 — the loader reads `source.Tree` (fs.FS + label); embedded trees are no longer extracted to temp dirs, and logs name `embed://…` or absolute disk paths. |
 | M-07 | collections `sessions`, `schedule_sessions` | Glossary rename pending: `sessions` -> `attempts`, `schedule_sessions` -> `sessions`, `/session/[id]` -> `/attempt/[id]`. |
 | M-08 | `nabu.Options.Public` | The SPA is a build output, so `go get` cannot deliver it. A library consumer copies `pb_public/` or passes `Public`. Decide: ship the built SPA as a release asset, or as an embeddable Go package generated in CI. |
 | M-09 | `nabu.New` | Sets package-level state (`embedfs.OverrideYAML`, `demo.Override`, embedfs flag vars), so one App per process. Thread it through instead if a consumer ever needs two. |
