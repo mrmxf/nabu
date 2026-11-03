@@ -66,6 +66,11 @@ ci:
           nabu-web-{tag}.tar.gz
 
 snippets:
+  # tracked files with a real-looking email (domain starts with a letter, so an
+  # npm package@1.2.3 is not one), other than the sample domain and LICENSE
+  emails-found: |
+    git grep -nIE '[A-Za-z0-9._%+-]+@[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b' -- . ':!LICENSE' ':!web/package-lock.json' ':!runtime/package-lock.json' \
+      | grep -vE '@nabu\.example|@(sveltejs|types|langchain|mrmxf/nabu-runtime)/' || true
   project:
     config: |
       export PROJECT=nabu
@@ -83,13 +88,12 @@ check:
     blocks:
       - name: sample identities only
         try: |
-          hits="$(git grep -nIE '[A-Za-z0-9._%+-]+@[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b' -- . ':!LICENSE' ':!web/package-lock.json' ':!runtime/package-lock.json' \
-            | grep -vE '@nabu\.example|@(sveltejs|types|langchain|mrmxf/nabu-runtime)/' || true)"
-          [ -z "$hits" ] && exit 0
-          printf '%s\n' "$hits" | head -20; exit 1
+          [ -z "$(clog emails-found)" ]
         ok: |
           clog Log -I "  sample identities only (@nabu.example)"
         catch: |
+          # the try: output is not shown in CI logs, so name the offenders here
+          clog emails-found | head -20 | while IFS= read -r hit; do clog Log -E "    $hit"; done
           clog Log -E "  real-looking emails above: use alice@nabu.example (only LICENSE keeps the author's)"
           exit 1
       - name: no ko
