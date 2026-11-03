@@ -48,7 +48,7 @@ Three tiers, joined by contracts defined once in `academy/contract/`:
 - Academy <-> course is a single-writer cryptographic sync (signed, idempotent
   documents), never a cross-system transaction. The academy writes rosters; the course
   writes progress, local-first through an outbox.
-- Bulky media is not in git: `/<course>/<lesson>/media/<asset>`, from an S3 mount or a
+- Bulky media is not in git: `/content/<course>/<lesson>/media/<asset>`, from an S3 mount or a
   Worker proxy to R2/S3.
 
 ### Classroom shape

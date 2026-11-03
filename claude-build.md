@@ -14,8 +14,10 @@ bash scripts/check-widget-docs.sh      # widget catalogue == 40-widgets.md; sile
 ```
 
 ```bash
+bin/nabu init <dir> [--lesson slug] [--library --module path]   # new course repo
 bin/nabu seed [--content d] [--assets d] [--schedules f] [--help-content d] [--strict]
-bin/nabu serve [--http=127.0.0.1:8090] [--dir path/to/pb_data]
+bin/nabu build [--out dist] [--public d]   # static site: web app + live lessons as JSON
+bin/nabu serve [--http=127.0.0.1:8090] [--dir path/to/pb_data] [--media-dir store]
 bin/nabu stop
 bin/nabu -C ../my-course seed          # use ../my-course/nabu.yaml
 bin/nabu admin validate [-q] [--deep]  # readiness gate; exits 1 on any FAIL
@@ -61,6 +63,26 @@ Settings that the SPA needs are seeded into the `app_config` collection by `seed
 - Demo accounts come from `course.demo_roster`, else `internal/demo/demo_mode.yaml`
   (neutral, enrolled in no course). Only with `demo_mode: true`.
 - A superuser roster entry needs its `password_env` set, or it is skipped.
+
+## Static build (`nabu build`)
+
+- Runs BEFORE PocketBase bootstraps (like `init`), so it never creates `pb_data`.
+- Writes `/content/index.json` and `/content/<course>/<lesson>/lesson.json`, under
+  `/content/` so they can never collide with an app route.
+- Publishes only what the API's `liveRule` would show NOW. A future go-live is left
+  out, so rebuild when it arrives. Teacher pages are never written.
+- Clears `--out` only if it holds a previous build (`.nabu-build` marker).
+- Web app: `--public`, then `Options.Public`, then `./pb_public`.
+- To check it like Cloudflare Pages: serve `dist/` with SPA fallback (missing paths
+  -> index.html, status 200) and no API, then load `/nabu/help` in headless Chrome:
+  `google-chrome --headless=new --dump-dom --virtual-time-budget=8000 <url>`.
+
+## Exit codes
+
+`pocketbase.Execute` discards the command's error. `App.Start` wraps every `RunE`
+(`captureCommandErrors`) and returns it, so a failing `seed` exits 1 and fails CI.
+`prepare()` must register every command, including `serve`, before Start decides
+how to dispatch. `TestPrepareRegistersServe` guards that order.
 
 ## Testing the library API
 

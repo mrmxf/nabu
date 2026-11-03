@@ -19,6 +19,10 @@ Severity: **B** blocking / incorrect output · **M** moderate debt · **C** cosm
 | M-09 | `nabu.New` | Sets package-level state (`embedfs.OverrideYAML`, `demo.Override`, embedfs flag vars), so one App per process. Thread it through instead if a consumer ever needs two. |
 | M-10 | `help/using-nabu/reference/` | REQUIRED: a new `05-deployment-modes.md`, "SaaS on Cloudflare or a classroom laptop?". It covers the mode table for beginners, when to choose each, offline behaviour, where student data lives, how classroom results reach the SaaS later, and a mermaid diagram per mode. Every deploy page links to it. |
 | M-11 | `web/static/who-is-nabu.png` | 6 MB of the 6.7 MB web app bundle (the app code is 764 KB). Convert to WebP at the displayed size before the first release. |
+| M-12 | group notes (`pbProvider.noteText`) | Keyed by the PocketBase slide RECORD id. Ids are stable across re-seeds (upsert by slug) but not across databases, e.g. a fresh SaaS container that re-seeds. Re-key by `<course>/<lesson>/<slug>` (the static id) with a migration, so the run page can also read static content. |
+| M-13 | release tags | No `v*` tag exists yet. Library courses get pseudo-versions (`go get …@latest`), and `nabu web fetch` (M-08) has nothing to fetch until the first release. |
+| M-14 | static tier | A scheduled go-live cannot be enforced by a static site; `nabu build` leaves future lessons out. SaaS CI must rebuild at go-live (e.g. a scheduled build). |
+| C-04 | `nabu init` | Writes no CI or Cloudflare templates yet: they arrive with steps 5–6. |
 | C-01 | `internal/httpapi/agentcfg_test.go`, `internal/students/backup.go` and others | Pre-existing gofmt drift. Format only files you otherwise touch. |
 | C-02 | `/api/agent/health` | Requires sign-in, so a signed-out page cannot show worker status. Intentional or not: undecided. |
 | C-03 | `runtime/package.json` | `private: true` until the npm package name and registry are decided. |

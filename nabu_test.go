@@ -63,3 +63,27 @@ func TestLibrarySeedsEmbeddedCourse(t *testing.T) {
 		t.Fatalf("built-in help not seeded: %v", err)
 	}
 }
+
+// TestPrepareRegistersServe guards the dispatch order in Start: once prepared,
+// `serve` (registered by prepare, not New) must resolve, along with the
+// pre-bootstrap commands, while a typo stays unknown.
+func TestPrepareRegistersServe(t *testing.T) {
+	t.Cleanup(func() { embedfs.OverrideYAML, demo.Override = nil, nil })
+	app := New(Options{DataDir: filepath.Join(t.TempDir(), "pb_data"), KeepLogger: true})
+	app.prepare()
+	for _, name := range []string{"serve", "seed", "build", "init", "stop"} {
+		c, _, err := app.RootCmd.Find([]string{name})
+		if err != nil || c == nil || c.Name() != name {
+			t.Errorf("%s not registered: %v", name, err)
+		}
+	}
+	serve, _, _ := app.RootCmd.Find([]string{"serve"})
+	for _, flag := range []string{"port", "media-dir", "http"} {
+		if serve.Flag(flag) == nil {
+			t.Errorf("serve has no --%s", flag)
+		}
+	}
+	if _, _, err := app.RootCmd.Find([]string{"sereve"}); err == nil {
+		t.Error("a typo should not resolve")
+	}
+}

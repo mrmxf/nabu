@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
 	import type { SlideRec, CourseRec, LessonRec, ChoiceGroup, DataMapper } from '$lib/types';
+	import { staticLesson } from '$lib/lms/staticContent';
 	import CountdownTimer from '$lib/components/CountdownTimer.svelte';
 	import Slide from '$lib/components/Slide.svelte';
 	import PersonaBadge from '$lib/components/PersonaBadge.svelte';
@@ -82,12 +83,19 @@
 	onMount(async () => {
 		loadSettings();
 		try {
-			const cls = await pb
-				.collection('courses')
-				.getFirstListItem<CourseRec>(`slug = "${courseSlug}" && guest_access = true`);
-			const lesson = await pb
-				.collection('lessons')
-				.getFirstListItem<LessonRec>(`course = "${cls.id}" && slug = "${lessonSlug}"`);
+			// a static build first (works with no server), then PocketBase.
+			const published = await staticLesson(courseSlug, lessonSlug);
+			if (published && !published.course.guest_access) throw new Error('This lesson is not public.');
+			const cls =
+				published?.course ??
+				(await pb
+					.collection('courses')
+					.getFirstListItem<CourseRec>(`slug = "${courseSlug}" && guest_access = true`));
+			const lesson =
+				published?.lesson ??
+				(await pb
+					.collection('lessons')
+					.getFirstListItem<LessonRec>(`course = "${cls.id}" && slug = "${lessonSlug}"`));
 			title = lesson.title;
 			// navbar logo: this lesson's, falling back to its course's, then default.
 			setLessonLogo(lesson.logo);
@@ -95,10 +103,12 @@
 			// authored styling for the slide bodies: course theme, then lesson override.
 			setCourseCss(cls.css);
 			setLessonCss(lesson.css);
-			slides = await pb.collection('slides').getFullList<SlideRec>({
-				filter: `lesson = "${lesson.id}"`,
-				sort: 'order'
-			});
+			slides =
+				published?.slides ??
+				(await pb.collection('slides').getFullList<SlideRec>({
+					filter: `lesson = "${lesson.id}"`,
+					sort: 'order'
+				}));
 			resetChoiceValues(); // fresh, ephemeral picks for this preview visit
 			resetDataValues();
 			// fetch each unique t_mapper data source once.

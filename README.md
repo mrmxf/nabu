@@ -36,6 +36,8 @@ today Nabu runs as a single binary.
 ./bin/nabu seed               # the sample course + Nabu's built-in help
 ./bin/nabu serve              # http://127.0.0.1:8090
 ./bin/nabu stop               # (from another terminal) graceful stop
+./bin/nabu build --out dist   # static site: guest lessons work with no server
+./bin/nabu init ../my-course  # start a new course repo (--library for a Go binary)
 ```
 
 Open **http://127.0.0.1:8090/nabu/help**: no sign-in is needed for the help or

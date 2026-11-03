@@ -2,11 +2,14 @@
 	import { pb } from '$lib/pocketbase';
 	import { onMount } from 'svelte';
 	import type { CourseRec, LessonRec } from '$lib/types';
+	import { staticCatalogue } from '$lib/lms/staticContent';
 	import PersonaBadge from '$lib/components/PersonaBadge.svelte';
 	import { personas, matchesFilter, type Persona } from '$lib/personas';
 
 	// Public help index. Lists guest-viewable courses (guest_access = true) and
 	// their lessons; no login required. Content is public-read via the liveRule.
+	// A static build (`nabu build`) is read first, so this page also works on a
+	// static host with no server; otherwise PocketBase.
 	let courses = $state<CourseRec[]>([]);
 	let lessons = $state<LessonRec[]>([]);
 	let loading = $state(true);
@@ -21,6 +24,13 @@
 
 	onMount(async () => {
 		try {
+			const published = await staticCatalogue();
+			if (published) {
+				courses = published.courses.filter((c) => c.guest_access).sort((a, b) => a.order - b.order);
+				const ids = new Set(courses.map((c) => c.id));
+				lessons = published.lessons.filter((l) => ids.has(l.course)).sort((a, b) => a.order - b.order);
+				return;
+			}
 			courses = await pb.collection('courses').getFullList<CourseRec>({
 				filter: 'guest_access = true',
 				sort: 'order'

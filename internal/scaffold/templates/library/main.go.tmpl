@@ -1,0 +1,31 @@
+// Command {{.Binary}} is the {{.Title}} course, built with Nabu as a Go library:
+// the content and course config are baked into the binary.
+package main
+
+import (
+	"embed"
+	"io/fs"
+	"log/slog"
+	"os"
+
+	"github.com/mrmxf/nabu"
+)
+
+//go:embed all:content
+var content embed.FS
+
+//go:embed nabu.yaml
+var config []byte
+
+func main() {
+	course, err := fs.Sub(content, "content")
+	if err != nil {
+		slog.Error("embedded content", "err", err)
+		os.Exit(1)
+	}
+	app := nabu.New(nabu.Options{Content: course, ConfigYAML: config})
+	if err := app.Start(); err != nil {
+		slog.Error("{{.Binary}} exited", "err", err)
+		os.Exit(1)
+	}
+}

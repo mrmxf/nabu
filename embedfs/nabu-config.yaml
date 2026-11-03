@@ -31,6 +31,12 @@ course:
   # The demo roster. Empty => the course-neutral default embedded in
   # internal/demo/demo_mode.yaml (accounts that enrol in no course).
   demo_roster: ""
+  # The media store for bulky lesson media that is not in git (video, audio):
+  # `serve` publishes <media>/<course>/<lesson>/media/<asset> at
+  # /content/<course>/<lesson>/media/<asset>, which is where a slide's
+  # `media:<asset>` reference points. Typically an S3 bucket mounted read-only
+  # (rclone, mountpoint-s3). Empty => no media route. `serve --media-dir` overrides.
+  media: ""
 
 # ── Classroom fast login ─────────────────────────────────────────────────────
 # A stopgap for live lessons: while this is on AND a Session is inside its

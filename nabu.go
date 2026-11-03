@@ -27,7 +27,9 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/mrmxf/util/slogger"
@@ -44,6 +46,7 @@ import (
 	"github.com/mrmxf/nabu/internal/deploy"
 	"github.com/mrmxf/nabu/internal/hooks"
 	"github.com/mrmxf/nabu/internal/httpapi"
+	"github.com/mrmxf/nabu/internal/scaffold"
 	"github.com/mrmxf/nabu/internal/seed"
 	"github.com/mrmxf/nabu/internal/serverctl"
 	"github.com/mrmxf/nabu/internal/students"
@@ -105,7 +108,19 @@ type Options struct {
 type App struct {
 	*pocketbase.PocketBase
 	opts Options
+	// mediaDir is the media store `serve` publishes (see serveMedia); set by
+	// `serve --media-dir` or course.media.
+	mediaDir string
+	// cmdErr is the error the last command returned. PocketBase's Execute
+	// discards it, so Start records it to return (and exit non-zero) itself.
+	cmdErr error
+	// prepared is set once prepare has finished the command tree.
+	prepared bool
 }
+
+// preBootstrapCommands run without opening or creating a database: they only
+// read course files (build) or write a new course repo (init).
+var preBootstrapCommands = map[string]bool{"build": true, "init": true}
 
 // New builds a Nabu App. It registers Nabu's commands (seed, stop, users,
 // admin, snapshot, install, migrate), global flags (-c/--config,
@@ -146,11 +161,10 @@ func New(opts Options) *App {
 	pb.RootCmd.PersistentFlags().StringVarP(&embedfs.CourseDir, "course-dir", "C", "",
 		"course directory whose "+embedfs.CourseFile+" overrides the embedded config")
 
-	pb.RootCmd.AddCommand(seed.NewCommand(pb, seed.Sources{
-		Content: opts.Content,
-		Assets:  opts.Assets,
-		Help:    opts.Help,
-	}))
+	sources := seed.Sources{Content: opts.Content, Assets: opts.Assets, Help: opts.Help}
+	pb.RootCmd.AddCommand(seed.NewCommand(pb, sources))
+	pb.RootCmd.AddCommand(seed.NewBuildCommand(sources, opts.Public))
+	pb.RootCmd.AddCommand(scaffold.NewCommand())
 	pb.RootCmd.AddCommand(serverctl.NewStopCommand(pb))
 	pb.RootCmd.AddCommand(students.NewCommand(pb))
 	pb.RootCmd.AddCommand(admin.NewCommand(pb))
@@ -200,16 +214,44 @@ func (a *App) onServe(se *core.ServeEvent) error {
 	if public == nil {
 		public = os.DirFS(filepath.Join(filepath.Dir(a.DataDir()), "pb_public"))
 	}
+	if a.mediaDir != "" {
+		a.serveMedia(se)
+	}
 	// indexFallback=true routes unknown paths to index.html so client-side
 	// routes (e.g. /session/:id) work.
 	se.Router.GET("/{path...}", apis.Static(public, true))
 	return se.Next()
 }
 
+// serveMedia publishes the media store at /content/<course>/<lesson>/media/<asset>
+// (see content.MediaURL), reading <mediaDir>/<course>/<lesson>/media/<asset>, so
+// the URL minus "/content" is the path in the store. Range requests work, so
+// video can seek. The pattern is more specific than the SPA catch-all.
+func (a *App) serveMedia(se *core.ServeEvent) {
+	store := os.DirFS(a.mediaDir)
+	if st, err := os.Stat(a.mediaDir); err != nil || !st.IsDir() {
+		slog.Warn("media store not found; media: links will 404", "media_dir", a.mediaDir,
+			"fix", "mount the media store there, or fix --media-dir / course.media")
+	} else {
+		slog.Info("serving media", "media_dir", a.mediaDir, "url", "/content/<course>/<lesson>/media/<asset>")
+	}
+	se.Router.GET("/content/{course}/{lesson}/media/{asset...}", func(e *core.RequestEvent) error {
+		rel := path.Join(e.Request.PathValue("course"), e.Request.PathValue("lesson"), "media",
+			e.Request.PathValue("asset"))
+		if !fs.ValidPath(rel) {
+			return e.NotFoundError("", nil)
+		}
+		http.ServeFileFS(e.Response, e.Request, store, rel)
+		return nil
+	})
+}
+
 // Start runs the command line: `serve`, `seed`, `stop` and the rest. It returns
-// when the command finishes (for `serve`, on graceful shutdown).
+// when the command finishes (for `serve`, on graceful shutdown), with the
+// command's error so the process can exit non-zero.
 func (a *App) Start() error {
 	pb := a.PocketBase
+	a.prepare()
 	// snapshot/install operate on files and must run BEFORE PocketBase opens or
 	// creates the database (see internal/deploy).
 	if handled, err := deploy.PreBootstrap(pb); handled {
@@ -218,15 +260,85 @@ func (a *App) Start() error {
 		}
 		return nil
 	}
+	// build and init need no database: run them through cobra directly, so
+	// PocketBase never bootstraps (which would create pb_data as a side effect).
+	// An unknown command also goes straight to cobra, so its error is returned
+	// (exit non-zero) instead of being swallowed by pocketbase.Execute.
+	if cmd, _, err := pb.RootCmd.Find(os.Args[1:]); err != nil || (cmd != nil && preBootstrapCommands[cmd.Name()]) {
+		return pb.RootCmd.Execute()
+	}
+	if err := pb.Execute(); err != nil {
+		return err
+	}
+	return a.cmdErr
+}
 
-	// Register PocketBase's system commands ourselves — this is what
-	// pocketbase.Start does internally — so `serve` can gain a --port shorthand.
-	// We deliberately do NOT register PocketBase's `superuser` command: every
-	// account is created through the one roster-import path (`nabu seed` /
-	// `nabu users import`) or PocketBase's first-run page at /_/.
+// prepare finishes the command tree. It must run before any dispatch decision,
+// because `serve` only exists once registered here: deciding first would treat
+// `serve` as an unknown command.
+//
+// We register PocketBase's `serve` ourselves — this is what pocketbase.Start
+// does internally — so it can gain --port and --media-dir. We deliberately do
+// NOT register PocketBase's `superuser` command: every account is created
+// through the one roster-import path (`nabu seed` / `nabu users import`) or
+// PocketBase's first-run page at /_/.
+func (a *App) prepare() {
+	if a.prepared {
+		return
+	}
+	a.prepared = true
+	pb := a.PocketBase
 	pb.RootCmd.AddCommand(cmd.NewServeCommand(pb, true))
 	enableServePortFlag(pb)
-	return pb.Execute()
+	a.enableServeMediaFlag()
+	a.captureCommandErrors(pb.RootCmd)
+}
+
+// captureCommandErrors wraps every command's RunE to record its error in
+// a.cmdErr. pocketbase.Execute discards the root command's error, which would
+// otherwise make a failing `seed` exit 0 and pass CI.
+func (a *App) captureCommandErrors(c *cobra.Command) {
+	if run := c.RunE; run != nil {
+		c.RunE = func(cmd *cobra.Command, args []string) error {
+			err := run(cmd, args)
+			if err != nil {
+				a.cmdErr = err
+			}
+			return err
+		}
+	}
+	for _, sub := range c.Commands() {
+		a.captureCommandErrors(sub)
+	}
+}
+
+// enableServeMediaFlag adds `serve --media-dir`, which publishes a media store
+// (see serveMedia). Without the flag, course.media from the config is used.
+func (a *App) enableServeMediaFlag() {
+	serveCmd, _, err := a.RootCmd.Find([]string{"serve"})
+	if err != nil || serveCmd == nil || serveCmd.Name() != "serve" {
+		return
+	}
+	var dir string
+	serveCmd.Flags().StringVar(&dir, "media-dir", "",
+		"media store served at /content/<course>/<lesson>/media/<asset> (default: course.media)")
+	prev := serveCmd.PreRunE
+	serveCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		if prev != nil {
+			if err := prev(cmd, args); err != nil {
+				return err
+			}
+		}
+		if dir == "" {
+			cfg, err := embedfs.LoadConfig()
+			if err != nil {
+				return fmt.Errorf("load config for course.media: %w", err)
+			}
+			dir = embedfs.ResolvePath(cfg.Course.Media)
+		}
+		a.mediaDir = dir
+		return nil
+	}
 }
 
 // enableServePortFlag adds a `--port` shorthand to PocketBase's built-in `serve`

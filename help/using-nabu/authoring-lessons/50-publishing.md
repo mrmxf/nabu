@@ -35,3 +35,26 @@ common traps early: a new lesson that names an S3 bucket with no credentials set
 content that fails to parse, or a missing superuser. Fix any printed FAIL lines,
 re-run until silent, then deploy.
 
+
+**Bulky media (video, audio)**
+
+Large files do not belong in git. Put them in the media store, which is usually an
+S3 bucket mounted read-only, laid out as `<course>/<lesson>/media/<file>`. Then
+point at them with `media:`:
+
+```markdown
+![Intro clip](media:intro.mp4)
+<video src="media:demo.mp4" poster="media:demo.jpg" controls></video>
+```
+
+Nabu rewrites `media:intro.mp4` to `/content/<course>/<lesson>/media/intro.mp4`,
+which `nabu serve --media-dir <store>` (or `course.media` in `nabu.yaml`) serves.
+New courses from `nabu init` already keep `content/*/*/media/` out of git.
+
+**A static copy for any web host**
+
+`nabu build --out dist` writes the web app plus every **live** lesson as plain
+files. Guest lessons then work on any static host (Cloudflare Pages, GitHub Pages)
+with no Nabu server. Drafts, lessons scheduled for later, and teacher pages are
+never published, so rebuild when a scheduled lesson goes live. Signed-in features
+(sessions, groups, agents) still need `nabu serve`.

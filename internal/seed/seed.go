@@ -365,18 +365,12 @@ type contentRoot struct {
 	help bool
 }
 
-// assets is the course assets tree; t_mapper data files resolve under its data/.
-func ingestContent(app core.App, roots []contentRoot, assets source.Tree, renderer string, strict bool) error {
-	r, err := content.NewRenderer(renderer)
-	if err != nil {
-		return err
-	}
-	sink := &fileAssetSink{publicDir: publicDir(app.DataDir())}
-	// resolveLms rewrites lms://resources/<path> references in lesson text to the
-	// object's public URL at build time. Course resources only for now; group/student
-	// refs are viewer-dependent and left for runtime resolution.
+// newLmsResolver rewrites lms://resources/<path> references in lesson text to
+// the object's public URL at ingest time. Course resources only for now;
+// group/student refs are viewer-dependent and left for runtime resolution.
+func newLmsResolver() func(bucket, prefix, ref string) (string, bool) {
 	s3 := s3svc.New()
-	resolveLms := func(bucket, prefix, ref string) (string, bool) {
+	return func(bucket, prefix, ref string) (string, bool) {
 		if !s3.Configured() || bucket == "" {
 			return "", false
 		}
@@ -386,6 +380,16 @@ func ingestContent(app core.App, roots []contentRoot, assets source.Tree, render
 		}
 		return s3.PublicURL(bucket, lmsfs.KeyForRef(prefix, scope, rel)), true
 	}
+}
+
+// assets is the course assets tree; t_mapper data files resolve under its data/.
+func ingestContent(app core.App, roots []contentRoot, assets source.Tree, renderer string, strict bool) error {
+	r, err := content.NewRenderer(renderer)
+	if err != nil {
+		return err
+	}
+	sink := &fileAssetSink{publicDir: publicDir(app.DataDir())}
+	resolveLms := newLmsResolver()
 	var probs []content.Problem
 	for _, root := range roots {
 		if !root.tree.Exists() {

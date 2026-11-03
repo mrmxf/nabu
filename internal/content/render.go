@@ -117,6 +117,8 @@ func (r *GoldmarkRenderer) Render(src string, ctx RenderContext) (string, []lmsI
 	out = rewriteXrefLinks(out, ctx)
 	out, lmsIssues := rewriteLmsRefs(out, ctx)
 	issues = append(issues, lmsIssues...)
+	out, mediaIssues := rewriteMediaRefs(out, ctx)
+	issues = append(issues, mediaIssues...)
 	return out, issues, nil
 }
 
@@ -248,11 +250,48 @@ func fileIn(src source.Tree, rel string) bool {
 	return err == nil && st.Mode().IsRegular()
 }
 
+// isRemoteOrAbsolute reports whether src points outside the page bundle: an
+// absolute path, or any URI with a scheme (http:, data:, lms:, media:, mailto:…).
+// Scheme refs are resolved by their own rewriters, never copied as bundle files.
 func isRemoteOrAbsolute(src string) bool {
-	return strings.HasPrefix(src, "/") ||
-		strings.HasPrefix(src, "http://") ||
-		strings.HasPrefix(src, "https://") ||
-		strings.HasPrefix(src, "data:")
+	return strings.HasPrefix(src, "/") || uriSchemeRe.MatchString(src)
+}
+
+// uriSchemeRe matches a leading URI scheme (RFC 3986: ALPHA *( ALPHA / DIGIT /
+// "+" / "-" / "." ) ":"). Two letters minimum, so a bare drive letter never counts.
+var uriSchemeRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]+:`)
+
+// MediaScheme prefixes a reference to a lesson's bulky media, which is not in git
+// but on a mounted store (see MediaURL).
+const MediaScheme = "media:"
+
+// MediaURL is where a lesson's media asset is served:
+// /content/<course>/<lesson>/media/<asset>. Under /content/ so it can never
+// collide with an app route (a course called "admin" or "login"), and so the URL
+// minus "/content" is the asset's path in the media store.
+func MediaURL(courseSlug, lessonSlug, asset string) string {
+	return "/" + path.Join("content", courseSlug, lessonSlug, "media", asset)
+}
+
+// mediaRefRe matches a media: reference in a rendered src/href/poster attribute.
+var mediaRefRe = regexp.MustCompile(`(\b(?:src|href|poster)=")(media:[^"]+)(")`)
+
+// rewriteMediaRefs turns media:<asset> into the served MediaURL for this slide's
+// lesson. A ref that escapes the lesson's media folder (`..`) or names nothing is
+// left as authored and stamped as a WARNING.
+func rewriteMediaRefs(htmlStr string, ctx RenderContext) (string, []lmsIssue) {
+	var issues []lmsIssue
+	out := mediaRefRe.ReplaceAllStringFunc(htmlStr, func(m string) string {
+		parts := mediaRefRe.FindStringSubmatch(m)
+		asset, frag := splitFragment(strings.TrimPrefix(parts[2], MediaScheme))
+		asset = strings.TrimPrefix(asset, "/")
+		if asset == "" || !withinBundle(asset) || path.Clean(asset) == "." {
+			issues = append(issues, lmsIssue{StatusWarnings, fmt.Sprintf("bad media reference: %s", parts[2])})
+			return m
+		}
+		return parts[1] + MediaURL(ctx.CourseSlug, ctx.LessonSlug, path.Clean(asset)) + frag + parts[3]
+	})
+	return out, issues
 }
 
 // anchorHrefRe matches the href attribute of an <a> tag in rendered HTML.

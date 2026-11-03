@@ -89,6 +89,18 @@ scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh
 - `embed://` is a LABEL, never a path to open. Do not invent `/embed/…` paths: they read
   like real directories and can collide with one.
 
+### Static content and media
+- `nabu build` output and media share the `/content/` URL prefix: `/content/index.json`,
+  `/content/<course>/<lesson>/lesson.json`, `/content/<course>/<lesson>/media/<asset>`.
+  Never put content at `/<course>/…`: a course called `admin` or `login` would
+  collide with app routes.
+- Static JSON mirrors the PocketBase record field names, so pages read either. Only
+  content pages (help/guest viewer, help index) read static first. Anything keyed
+  by a record id (group notes, sessions, jobs) stays on PocketBase.
+- On a static host a missing file is `200 text/html` (SPA fallback): only a JSON
+  content type counts as found.
+- Never publish teacher pages or not-yet-live content statically.
+
 ### Config
 - The embedded `embedfs/nabu-config.yaml` holds defaults. A course overrides with
   `nabu.yaml`, found via `-c <file>`, `-C/--course-dir <dir>`, or `./nabu.yaml`.

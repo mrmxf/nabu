@@ -1,0 +1,25 @@
+# {{.Title}}
+
+A course for [Nabu](https://github.com/mrmxf/nabu).
+
+```bash
+nabu seed      # load content/ into pb_data (run from this folder)
+nabu serve     # http://127.0.0.1:8090
+nabu build     # static site in dist/ (guest lessons work with no server)
+```
+
+Content lives in `content/{{.Course}}/`. The full authoring guide is the
+[nabu-tutorial](https://github.com/mrmxf/nabu-tutorial) course.
+{{- if .Library}}
+
+This course builds its own binary with Nabu as a Go library:
+
+```bash
+go get github.com/mrmxf/nabu@latest   # first time: adds Nabu to go.mod
+go build -o {{.Binary}} .
+./{{.Binary}} seed && ./{{.Binary}} serve
+```
+
+The web app is a build output of Nabu, not part of the Go module: put a built
+`pb_public/` beside the data dir (see Nabu's README).
+{{- end}}

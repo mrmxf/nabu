@@ -1,0 +1,12 @@
+# Course config for Nabu. Paths are relative to this file.
+# Every key here overrides Nabu's embedded defaults (see embedfs/nabu-config.yaml
+# in github.com/mrmxf/nabu).
+course:
+  content: content                         # content/<course>/<lesson>/<slide>.md
+  assets: assets                           # optional Hugo-style assets
+  schedules: content/lesson-schedules.yaml # optional cohort schedules
+  # demo_roster: rosters/demo.yaml         # demo accounts, used when demo_mode: true
+
+pocketbase:
+  app:
+    name: {{.Title}}

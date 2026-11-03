@@ -96,6 +96,10 @@ type CourseConfig struct {
 	// DemoRoster is the course's demo roster. Empty => the course-neutral roster
 	// embedded in internal/demo.
 	DemoRoster string `koanf:"demo_roster"`
+	// Media is the media store (e.g. an S3 mount) that `serve` publishes at
+	// /content/<course>/<lesson>/media/<asset>, from <media>/<course>/<lesson>/media/<asset>.
+	// Empty => no media route. `serve --media-dir` overrides it.
+	Media string `koanf:"media"`
 }
 
 // AIConfig is the ai.* subtree — which AI back-ends this deployment exposes.
