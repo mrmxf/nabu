@@ -61,6 +61,33 @@ the Wi-Fi uplink off. When no worker is reachable, agent jobs authored with
 offline, so classroom content should set the fallback. The transport policy already
 allows http to LAN and loopback workers.
 
+## Hosts and routes (decided 2026-11-03)
+
+- **Courses are anchored on `nabu.mrmxf.com`:** `https://nabu.mrmxf.com/<course>/…`,
+  including the API (`/<course>/api/*`, routed to that course's container) and media.
+- **The course menu is served identically at `https://nabu.mrmxf.com/` and
+  `https://mrmxf.com/learn/`** by ONE academy Worker (`www-nabu-academy`).
+- `nabu.mrmxf.com` is a **Workers custom domain** of that Worker: `wrangler deploy` creates
+  the proxied DNS record and the certificate. Never add the record by hand.
+- `mrmxf.com/learn` uses **two zone routes on the same Worker**, `mrmxf.com/learn` and
+  `mrmxf.com/learn/*`. Never `/learn*`, which would also catch `/learning…`. Worker routes
+  match before the `www-mrmxf-prod` Pages site, as `/admin*`, `/forms/contact*` and `/get/*`
+  already do. No DNS change on the apex.
+- **Handler contract:**
+  - The menu is one renderer for both hosts.
+  - `mrmxf.com/learn` gets a 301 to `/learn/`.
+  - Any other `mrmxf.com/learn/<path>` gets a 301 to `https://nabu.mrmxf.com/<path>`.
+  - Course links and menu assets are absolute to `https://nabu.mrmxf.com`. Fonts are
+    served with `Access-Control-Allow-Origin: https://mrmxf.com`.
+  - Both copies carry `<link rel="canonical" href="https://nabu.mrmxf.com/">`.
+- **Login cookies are host-only on `nabu.mrmxf.com`.** Never `Domain=.mrmxf.com`: the
+  apex's other Workers (admin, forms) must not receive them. The apex menu is the public
+  catalogue; personal "continue" lives on the course host.
+- **Dev mode mirrors it:** `staging.mrmxf.com/learn` and `nabu-staging.mrmxf.com`
+  (`www-nabu-academy-dev`).
+- Course hosts stay first-level subdomains: Universal SSL does not cover
+  `x.nabu.mrmxf.com`.
+
 ## Delivering the web app (backlog M-08, decided: B + F)
 
 - Release CI builds the web app ONCE per `v*` tag. It is never committed.
