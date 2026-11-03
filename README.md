@@ -83,6 +83,34 @@ lists whichever demo sign-ins are active.
 # Infisical (if installed) and a worker assumed on 127.0.0.1:8091
 ```
 
+## Use Nabu as a Go library
+
+A course can build its own self-contained binary by importing Nabu, the way Nabu
+imports PocketBase. Everything the course needs is baked in with `//go:embed`:
+
+```go
+//go:embed all:content
+var content embed.FS
+
+//go:embed nabu.yaml
+var config []byte
+
+func main() {
+	course, _ := fs.Sub(content, "content")
+	app := nabu.New(nabu.Options{Content: course, ConfigYAML: config})
+	// app embeds *pocketbase.PocketBase: add commands, hooks or routes here
+	if err := app.Start(); err != nil {
+		os.Exit(1)
+	}
+}
+```
+
+`./my-course seed` then `./my-course serve` work with no course files on disk. A
+config file given at run time (`-c`, `-C`, `./nabu.yaml`) still overrides the
+baked one. The single-page app is a build output, not part of the Go module: put
+the built `pb_public/` beside the data dir, or pass it as `Options.Public`. See
+the [package docs][godoc] for every option.
+
 ## Agents
 
 Lessons can dispatch jobs to an **agent worker** over a small HTTP contract
@@ -100,7 +128,8 @@ public host (e.g. on Cloudflare or Scaleway) must use https and a
 ## Layout
 
 ```
-cmd/nabu/          the nabu binary: PocketBase + migrations + hooks + the SPA
+nabu.go            package nabu: the public library API (New, Options, App)
+cmd/nabu/          the nabu binary: a thin wrapper over package nabu
 cmd/nabu-worker/   stub agent worker (contract reference)
 internal/          engine packages (content, seed, httpapi, students, agentsvc, …)
 migrations/        Go schema migrations
@@ -121,6 +150,7 @@ from; override with `--dir`.
 BSD-3-Clause, see [LICENSE][license].
 
 [pocketbase]: https://pocketbase.io
+[godoc]: https://pkg.go.dev/github.com/mrmxf/nabu
 [tutorial]: https://github.com/mrmxf/nabu-tutorial
 [config]: embedfs/nabu-config.yaml
 [demo]: internal/demo/demo_mode.yaml

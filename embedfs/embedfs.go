@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"testing/fstest"
 
 	"github.com/mrmxf/util/kfg"
 )
@@ -34,6 +35,12 @@ var OverrideFile string
 // CourseDir, when set (by the root `--course-dir`/`-C` flag), names a course repo
 // whose CourseFile is the override. Ignored when OverrideFile is set.
 var CourseDir string
+
+// OverrideYAML, when set (by nabu.Options.ConfigYAML), is a course config baked
+// into a library-built binary. It is merged over the embedded defaults and UNDER
+// any file override, so an operator's -c/-C/./nabu.yaml still wins at deploy
+// time. Relative paths in it resolve against the working directory.
+var OverrideYAML []byte
 
 // CourseFile is the conventional name of a course's config, looked for in
 // CourseDir or, failing that, the working directory.
@@ -208,6 +215,12 @@ func loadRaw() error {
 		PreventAutoReleases: true,
 	}); err != nil {
 		return fmt.Errorf("konfigure %s: %w", configFile, err)
+	}
+	if len(OverrideYAML) > 0 {
+		baked := fstest.MapFS{CourseFile: &fstest.MapFile{Data: OverrideYAML}}
+		if err := kfg.MergeKonfig(&kfg.KonfigureOpt{AppFs: baked, FilePath: CourseFile}); err != nil {
+			return fmt.Errorf("merge baked course config: %w", err)
+		}
 	}
 	if override := EffectiveOverride(); override != "" {
 		if _, err := os.Stat(override); err != nil {

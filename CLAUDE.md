@@ -28,7 +28,8 @@ tutorial content belongs in nabu-tutorial.
 ## Layout
 
 ```
-cmd/nabu/          the binary: PocketBase + migrations + hooks + SPA catch-all
+nabu.go            package nabu — the PUBLIC API: New(Options) -> *App (embeds *pocketbase.PocketBase)
+cmd/nabu/          the binary: nabu.New(nabu.Options{Automigrate: isGoRun()}).Start()
 cmd/nabu-worker/   stub agent worker — the worker-contract reference and test double
 internal/          engine packages: content (parse/render), seed, httpapi, students,
                    agentsvc (worker client), demo (neutral roster), roster, lmsfs, s3svc
@@ -65,6 +66,19 @@ scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh
 ### Identities
 - Sample identities only: `alice@nabu.example`, hosts `*.nabu.example`, `s3.nabu.example`.
 - The one exception is `LICENSE`, which keeps the author's real email.
+
+### Library API
+- `package nabu` (root) is the only public package; everything else is `internal/`.
+  Anything a course needs must be reachable through `Options` or the embedded
+  `*pocketbase.PocketBase` — never by importing `internal/`.
+- Precedence for embedded trees: command-line flag > `Options` field > config path.
+  Baked `ConfigYAML` sits UNDER any run-time config file.
+- `New` sets package-level state (`embedfs.OverrideYAML`, `demo.Override`): one App per
+  process. Tests that call `New` must reset them in `t.Cleanup`.
+- Never default `Automigrate` on: under `go run` in a course repo it would write
+  migration files into that repo. Only `cmd/nabu` turns it on.
+- Test library behaviour from an external module too (`replace` to this repo), from an
+  empty directory: no course files on disk. See claude-build.md.
 
 ### Config
 - The embedded `embedfs/nabu-config.yaml` holds defaults. A course overrides with

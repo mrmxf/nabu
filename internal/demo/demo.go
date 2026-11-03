@@ -19,6 +19,10 @@ import (
 	"github.com/mrmxf/nabu/embedfs"
 )
 
+// Override, when set (by nabu.Options.DemoRoster), is a demo roster baked into a
+// library-built binary. A `course.demo_roster` file in the config still wins.
+var Override []byte
+
 // defaultRoster is the embedded course-neutral demo roster, used when the config
 // names no `course.demo_roster` file.
 //
@@ -27,14 +31,17 @@ var defaultRoster []byte
 
 // RosterYAML returns the raw demo roster bytes, ready to hand to
 // students.DecodeRoster with students.FormatYAML: the file named by
-// `course.demo_roster` (resolved relative to the course's config file), or the
-// embedded default when that key is unset.
+// `course.demo_roster` (resolved relative to the course's config file), else the
+// library-baked Override, else the embedded course-neutral default.
 func RosterYAML() ([]byte, error) {
 	cfg, err := embedfs.LoadConfig()
 	if err != nil {
 		return nil, fmt.Errorf("load config for course.demo_roster: %w", err)
 	}
 	if cfg.Course.DemoRoster == "" {
+		if len(Override) > 0 {
+			return Override, nil
+		}
 		return defaultRoster, nil
 	}
 	path := embedfs.ResolvePath(cfg.Course.DemoRoster)

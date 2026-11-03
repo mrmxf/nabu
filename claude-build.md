@@ -59,6 +59,19 @@ Settings that the SPA needs are seeded into the `app_config` collection by `seed
   (neutral, enrolled in no course). Only with `demo_mode: true`.
 - A superuser roster entry needs its `password_env` set, or it is skipped.
 
+## Testing the library API
+
+`nabu_test.go` builds an App from `fstest.MapFS` content and runs `seed` through it.
+Also check from outside the module, since that is how makerlab uses it:
+
+```bash
+mkdir /tmp/lc && cd /tmp/lc     # main.go embeds content/ + nabu.yaml (see README)
+printf 'module example.nabu/lc\ngo 1.26\nrequire github.com/mrmxf/nabu v0.0.0\nreplace github.com/mrmxf/nabu => %s\n' ~/gr/nabu > go.mod
+GOFLAGS=-mod=mod go mod tidy && go build -o lc .
+mkdir /tmp/lc-run && cp lc /tmp/lc-run && cp -r ~/gr/nabu/pb_public /tmp/lc-run/
+cd /tmp/lc-run && ./lc seed && ./lc serve   # no course files on disk
+```
+
 ## Testing a schema change
 
 Seed a data dir with the PREVIOUS binary, then migrate it with the new one:

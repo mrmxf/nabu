@@ -53,6 +53,16 @@ type Paths struct {
 	Schedules string // lesson-schedules YAML pre-load (skipped if absent)
 }
 
+// Sources carries course trees embedded in a library-built binary (see
+// nabu.Options). A nil field means "use the path from the flags or config".
+// Precedence for each tree: an explicit flag, then the embedded Source, then
+// the course config's path.
+type Sources struct {
+	Content fs.FS // course content tree; may hold lesson-schedules.yaml at its root
+	Assets  fs.FS // Hugo-style assets tree
+	Help    fs.FS // help tree; nil => Nabu's own embedded help (package help)
+}
+
 // CoursePaths returns the course config's paths (course.*), each resolved
 // relative to the config file that set it.
 func CoursePaths() (Paths, error) {
@@ -69,7 +79,7 @@ func CoursePaths() (Paths, error) {
 
 // NewCommand returns the `seed` subcommand. The app is already bootstrapped by
 // PocketBase before the command runs, so the DB is open.
-func NewCommand(app core.App) *cobra.Command {
+func NewCommand(app core.App, src Sources) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "seed",
 		Short: "Populate demo accounts, config, and lessons from the content tree",
@@ -96,7 +106,7 @@ func NewCommand(app core.App) *cobra.Command {
 			p.Schedules, _ = cmd.Flags().GetString("schedules")
 			renderer, _ := cmd.Flags().GetString("renderer")
 			strict, _ := cmd.Flags().GetBool("strict")
-			return Run(app, p, renderer, strict)
+			return Run(app, p, src, renderer, strict)
 		},
 	}
 	cmd.Flags().String("content", "", "authored content tree (default: course.content from the config)")
@@ -109,12 +119,56 @@ func NewCommand(app core.App) *cobra.Command {
 	return cmd
 }
 
-// Run performs the idempotent seed. Empty fields of p take the course config's
-// paths; an empty p.Help seeds the help embedded in the binary.
-func Run(app core.App, p Paths, renderer string, strict bool) error {
+// Run performs the idempotent seed. Empty fields of p are filled from src (trees
+// embedded in a library build), then from the course config's paths; the help
+// falls back to the help embedded in the binary.
+func Run(app core.App, p Paths, src Sources, renderer string, strict bool) error {
 	cp, err := CoursePaths()
 	if err != nil {
 		return err
+	}
+	if renderer == "" {
+		renderer = defaultRenderer
+	}
+	// extract materialises an embedded tree on disk for the path-based loader.
+	var cleanups []func()
+	defer func() {
+		for _, c := range cleanups {
+			c()
+		}
+	}()
+	extract := func(fsys fs.FS, what string) (string, error) {
+		dir, cleanup, err := extractFS(fsys, what)
+		if err != nil {
+			return "", err
+		}
+		cleanups = append(cleanups, cleanup)
+		return dir, nil
+	}
+	if p.Content == "" && src.Content != nil {
+		if p.Content, err = extract(src.Content, "content"); err != nil {
+			return err
+		}
+		// an embedded course carries its schedules at the tree root, if at all
+		if p.Schedules == "" {
+			if s := filepath.Join(p.Content, "lesson-schedules.yaml"); fileExists(s) {
+				p.Schedules = s
+			}
+		}
+	}
+	if p.Assets == "" && src.Assets != nil {
+		if p.Assets, err = extract(src.Assets, "assets"); err != nil {
+			return err
+		}
+	}
+	if p.Help == "" {
+		helpFS := src.Help
+		if helpFS == nil {
+			helpFS = help.FS
+		}
+		if p.Help, err = extract(helpFS, "help"); err != nil {
+			return err
+		}
 	}
 	if p.Content == "" {
 		p.Content = cp.Content
@@ -124,17 +178,6 @@ func Run(app core.App, p Paths, renderer string, strict bool) error {
 	}
 	if p.Schedules == "" {
 		p.Schedules = cp.Schedules
-	}
-	if renderer == "" {
-		renderer = defaultRenderer
-	}
-	if p.Help == "" {
-		dir, cleanup, err := extractEmbeddedHelp()
-		if err != nil {
-			return err
-		}
-		defer cleanup()
-		p.Help = dir
 	}
 	contentDir, helpDir, schedulesPath := p.Content, p.Help, p.Schedules
 
@@ -678,16 +721,22 @@ func (s *fileAssetSink) Copy(srcPath, publicRel string) (string, error) {
 	return "/" + publicRel, nil
 }
 
-// extractEmbeddedHelp writes the embedded help course tree (package help) to a
-// temporary directory so the path-based content loader can ingest it, and
-// returns that directory plus a cleanup func that removes it.
-func extractEmbeddedHelp() (string, func(), error) {
-	dir, err := os.MkdirTemp("", "nabu-help-")
+// fileExists reports whether path names an existing regular file.
+func fileExists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.Mode().IsRegular()
+}
+
+// extractFS writes an embedded tree to a temporary directory so the path-based
+// content loader can ingest it, and returns that directory plus a cleanup func
+// that removes it. what names the tree in errors and the temp dir.
+func extractFS(fsys fs.FS, what string) (string, func(), error) {
+	dir, err := os.MkdirTemp("", "nabu-"+what+"-")
 	if err != nil {
-		return "", nil, fmt.Errorf("embedded help: %w", err)
+		return "", nil, fmt.Errorf("embedded %s: %w", what, err)
 	}
 	cleanup := func() { _ = os.RemoveAll(dir) }
-	err = fs.WalkDir(help.FS, ".", func(p string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -695,7 +744,7 @@ func extractEmbeddedHelp() (string, func(), error) {
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
-		data, err := help.FS.ReadFile(p)
+		data, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return err
 		}
@@ -703,7 +752,7 @@ func extractEmbeddedHelp() (string, func(), error) {
 	})
 	if err != nil {
 		cleanup()
-		return "", nil, fmt.Errorf("extract embedded help: %w", err)
+		return "", nil, fmt.Errorf("extract embedded %s: %w", what, err)
 	}
 	return dir, cleanup, nil
 }
