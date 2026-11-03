@@ -1,0 +1,18 @@
+# PocketBase runtime data (dev only) and the built SPA it serves (sibling dirs)
+pb_data*
+pb_public*
+
+# deploy blob archive (snapshot) and binaries
+internal/assets/embedded.tgz
+bin/
+nabu-deploy
+*.exe
+
+# Node / SvelteKit
+node_modules/
+web/.svelte-kit/
+web/build/
+runtime/dist/
+
+# WSL artifacts
+*:Zone.Identifier

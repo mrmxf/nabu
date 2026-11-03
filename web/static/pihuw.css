@@ -1,0 +1,824 @@
+/* ≡≡≡ INDEX ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/*  1. Colours & Fonts — raw palette, derived hi/bg/pad tokens, typography vars, breakpoints                         */
+/*  2. Dark mode       — system / forced-light / forced-dark tri-state                                               */
+/*  3. Base HTML       — body, h1-h6, code, hr, th  (colour tokens only, no layout)                                  */
+/*  4. PicnicCSS       — .card, .button, .label, .breadcrumb tweaks                                                  */
+/*  5. Navigation      — .pi-nav, .pi-menu-*, .dropdown, .logo-*, #siteTitleMenu                                     */
+/*  6. Page layout     — block columns, .src.block, .txt.block, .page-title, .breadcrumb                             */
+/*  7. Components      — .banner, .footer, sidebar, .childbar, .definition-block, .accordion / .tab                  */
+/*  8. Taxonomies      — .pi-tax-*, .pi-flex-*, .label-blog, .meta                                                   */
+/*  9. Media           — .image, section img, main footer.caption                                                    */
+/* 10. Graph           — .hw-graph, .hw-graph-error                                                                  */
+/* 11. Animations      — @keyframes bounce, hue-rotate; .view-s/m/w responsive classes                               */
+/* ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+/*  _______         _                                            ___                                                 */
+/* (_______)       | |                                 _        / __)                 _                              */
+/*  _         ___  | |   ___   _   _   ____   ___    _| |_    _| |__   ___   ____   _| |_   ___                      */
+/* | |       / _ \ | |  / _ \ | | | | / ___) /___)  (_   _)  (_   __) / _ \ |  _ \ (_   _) /___)                     */
+/* | |_____ | |_| || | | |_| || |_| || |    |___ |    |_|      | |   | |_| || | | |  | |_ |___ |                     */
+/*  \______) \___/  \_) \___/ |____/ |_|    (___/              |_|    \___/ |_| |_|   \__)(___/                      */
+/* ≡≡≡  1. Colours & Fonts  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+:root {
+
+  /* ── 1a  User palette ─────────────────────────────────────────────────────────────────────────────────────────── */
+  /* Edit these HSL values to customise the site. Everything else is derived.                                        */
+  --mm-yellow: #C2A649;
+  --mm-green:  #77B66B;
+  --mm-purple: #9A3A72;
+  --mm-blue:   #433F87;
+  --pi-dark:   #333333
+  --pi-light:  hsl(0,   0%,  93%);
+
+  /* metarex.media project palette (second named palette — do not rename) */
+  --mrx-amber:     #C2A649;
+  --mrx-purple:    #9A3A72;
+  --mrx-green:     #4F702A;
+  --mrx-grey:      #333333;
+  --mrx-skin:      #b5d690; /* hsl(from var(--mrx-green) s calc(l + 40%)); */
+  --mrx-eye:       #9a3a42;
+
+  /* CSS relative-colour replacements for SCSS lighten() calls */
+  --mrx-trainFill: hsl(from var(--mrx-grey)   h s calc(l + 25%));
+  --mrx-sky:       hsl(from var(--mrx-amber)  h s calc(l + 40%));
+  --mrx-ground:    hsl(from var(--mrx-purple) h s calc(l + 25%));
+
+  /* ── 1b  Derived tokens ───────────────────────────────────────────────────────────────────────────────────────── */
+  /* Computed from the mm palette above. Follow this pattern in your site.css Do not hardcode hex/hsl values.        */
+  --pi-body:    var(--pi-dark);
+  --pi-body-bg: hsl(40, 20%, 95%);   /* wheat-white page background */
+  --pi-bg:      hsl(0,  0%, 100%);   /* component surface (white) */
+  
+  --hi1: var(--mm-yellow);
+  --hi2: var(--mm-purple);
+  --hi3: var(--mm-green);
+  --hi4: var(--mm-blue);
+
+  --bg1: hsl(from var(--hi1) h s 95%);
+  --bg2: hsl(from var(--hi2) h s 95%);
+  --bg3: hsl(from var(--hi3) h s 95%);
+  --bg4: hsl(from var(--hi4) h s 95%);
+
+  --pi-meta:       hsl(from var(--pi-dark) h s 60%);
+  --pi-code:       var(--mm-blue);
+  --pi-link:       hsl(from var(--hi4) h s calc(l - 20%));  /* hi4 dimmed for light bg */
+
+  --pi-teal:          #35BDB2;   /* teal brand colour for logo — use --hi* for theme colours */
+  --hugo-theme-color: #FF4088;
+
+  /* graph palette — referenced by Chart.js via JS getComputedStyle */
+  --graph-c1: var(--hi1);
+  --graph-c2: var(--hi2);
+  --graph-c3: var(--hi3);
+  --graph-c4: var(--hi4);
+
+  /* ── 1c  Typography ───────────────────────────────────────────────────────────────────────────────────────────── */
+  /* Google Fonts: uncomment the @import at the top of site.css and replace these values.                            */
+  --font-body:        'Arial', sans-serif;
+  --font-mono:        'Courier New', monospace;
+  --font-narrow:      'Arial Narrow', Arial, sans-serif;
+  --font-size-base:   16px;
+  --line-height-base: 1.25;
+
+  /* ── 1d  Breakpoints ──────────────────────────────────────────────────────────────────────────────────────────── */
+  /* NOTE: CSS variables cannot be used inside @media queries — keep px values in sync with these.                   */
+  --break-s: 500px;    /* -s  small:  mobile & portrait phones — hamburger menu, no gutters                          */
+  --break-m: 800px;    /* -m  medium: tablets & low-res screens — normal menu, no sidebars                           */
+  --break-w: 1100px;   /* -w  wide:   TVs, 4K, desktop — full menu, gutters, optional sidebars                       */
+}
+
+
+/*                                                                                                                   */
+/*   ____             _                          _                                                                   */
+/*  |  _ \  __ _  _ _| | __   _ __ ___   ___   __| | ___                                                             */
+/*  | | | |/ _` || '_| |/ /  | '_ ` _ \ / _ \ / _` |/ _ \                                                            */
+/*  | |_| | (_| || |  |   <  | | | | | | (_) | (_| |  __/                                                            */
+/*  |____/ \__,_||_|  |_|\_\ |_| |_| |_|\___/ \__,_|\___|                                                            */
+/*                                                                                                                   */
+/* ≡≡≡  2. Dark mode  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/* Tri-state: "system" follows OS preference, "light"/"dark" user-forced via data-theme attribute on <html>.       */
+/* theme-toggle.js writes data-theme; theme-init.js restores it from localStorage on page load.                     */
+/* WHY THE DARK VALUES APPEAR TWICE (and why that is not a bug):                                                     */
+/* CSS cannot share a ruleset between a @media block and an attribute selector — there is no equivalent             */
+/* of a SCSS mixin or @apply in plain CSS. The two blocks below are therefore intentionally identical.               */
+/*   @media (prefers-color-scheme: dark)  — "system" mode: OS is dark, no data-theme attribute set.                 */
+/*   [data-theme="dark"]                  — user-forced dark: attribute present, OS preference irrelevant.           */
+/* Attribute selectors beat media queries in specificity, so [data-theme="light"] can override the @media           */
+/* block even when the OS is dark — that is what makes forced-light work correctly.                                  */
+/* The @media block must fire before JS runs to prevent a flash of wrong theme (FOUC), so it cannot depend           */
+/* on JS-written attributes. Edit both blocks together whenever dark palette values change.                          */
+
+/* ── system — dark values when OS is dark and the user has not forced a theme ───────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pi-dark:  hsl(0, 0%, 87%);
+    --pi-light: hsl(0, 0%, 12%);
+
+    --pi-body-bg: hsl(0, 0%, 8%);    /* near-black page background */
+    --pi-bg:      hsl(0, 0%, 15%);   /* dark grey component surface */
+
+    /* hi* raised in lightness so they pop against a ~10% background */
+    --hi1: hsl(46,  55%, 68%);   /* warm gold   — was 52% */
+    --hi2: hsl(324, 50%, 68%);   /* bright pink — was 42% */
+    --hi3: hsl(80,  45%, 64%);   /* lime green  — was 49% */
+    --hi4: hsl(243, 50%, 68%);   /* periwinkle  — was 39% */
+
+    /* bg* switched to dark tinted surfaces — hsl(from hi h s 95%) formula stays near-white in light mode */
+    --bg1: hsl(46,  25%, 14%);   /* dark amber */
+    --bg2: hsl(324, 20%, 14%);   /* dark mauve */
+    --bg3: hsl(80,  20%, 13%);   /* dark olive */
+    --bg4: hsl(243, 20%, 15%);   /* dark indigo */
+
+    /* pi-meta — slightly brighter than the formula gives on a dark bg */
+    --pi-meta: hsl(0, 0%, 65%);
+    --pi-link: hsl(from var(--hi4) h s calc(l + 20%));  /* hi4 brightened for dark bg */
+  }
+  /* banner and taxonomy label backgrounds use inline hsl(95%) — must override via class */
+  .banner         { background-color: var(--bg3); }
+  .pi-tax-1.label { background: var(--bg3); }
+  .pi-tax-2.label { background: var(--bg2); }
+  .pi-tax-3.label { background: var(--bg1); }
+  .pi-tax-4.label { background: var(--bg4); }
+}
+
+/* ── forced light — attribute selector wins over the @media block above ──────────────────────────────────────────── */
+[data-theme="light"] {
+  --pi-dark:  hsl(0, 0%, 20%);
+  --pi-light: hsl(0, 0%, 93%);
+
+  --pi-body-bg: hsl(40, 20%, 95%);   /* wheat-white page background */
+  --pi-bg:      hsl(0,  0%, 100%);   /* component surface (white) */
+  --pi-link:    hsl(from var(--hi4) h s calc(l - 20%));  /* hi4 dimmed for light bg */
+}
+
+/* ── forced dark — identical values to the @media block above; duplicated because CSS cannot share between          */
+/*    a @media query and an attribute selector. Edit both blocks together if dark palette values change. ─────────── */
+[data-theme="dark"] {
+  --pi-dark:  hsl(0, 0%, 87%);
+  --pi-light: hsl(0, 0%, 12%);
+
+  --pi-body-bg: hsl(0, 0%, 8%);    /* near-black page background */
+  --pi-bg:      hsl(0, 0%, 15%);   /* dark grey component surface */
+
+  /* hi* raised in lightness so they pop against a ~10% background */
+  --hi1: hsl(46,  55%, 68%);   /* warm gold   — was 52% */
+  --hi2: hsl(324, 50%, 68%);   /* bright pink — was 42% */
+  --hi3: hsl(80,  45%, 64%);   /* lime green  — was 49% */
+  --hi4: hsl(243, 50%, 68%);   /* periwinkle  — was 39% */
+
+  /* bg* switched to dark tinted surfaces — hsl(from hi h s 95%) formula stays near-white in light mode */
+  --bg1: hsl(46,  25%, 14%);   /* dark amber */
+  --bg2: hsl(324, 20%, 14%);   /* dark mauve */
+  --bg3: hsl(80,  20%, 13%);   /* dark olive */
+  --bg4: hsl(243, 20%, 15%);   /* dark indigo */
+
+  /* pi-meta — slightly brighter than the formula gives on a dark bg */
+  --pi-meta: hsl(0, 0%, 65%);
+  --pi-link: hsl(from var(--hi4) h s calc(l + 20%));  /* hi4 brightened for dark bg */
+}
+
+/* banner and taxonomy label backgrounds use inline hsl(95%) — must override via class */
+[data-theme="dark"] .banner         { background-color: var(--bg3); }
+[data-theme="dark"] .pi-tax-1.label { background: var(--bg3); }
+[data-theme="dark"] .pi-tax-2.label { background: var(--bg2); }
+[data-theme="dark"] .pi-tax-3.label { background: var(--bg1); }
+[data-theme="dark"] .pi-tax-4.label { background: var(--bg4); }
+
+
+/*  ______                         _     _  _______  _______  _                                                      */
+/* (____  \                       (_)   (_)(_______)(_______)(_)                                                     */
+/*  ____)  ) _____   ___  _____    _______     _     _  _  _  _                                                      */
+/* |  __  ( (____ | /___)| ___ |  |  ___  |   | |   | ||_|| || |                                                     */
+/* | |__)  )/ ___ ||___ || ____|  | |   | |   | |   | |   | || |_____                                                */
+/* |______/ \_____|(___/ |_____)  |_|   |_|   |_|   |_|   |_||_______)                                               */
+/* ≡≡≡  3. Base HTML  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/* Bare element overrides. These exist because markdown content authors cannot add CSS classes                       */
+/* to headings, code spans, hr, or th — the HTML is generated by Hugo's markdown renderer.                           */
+
+body {
+  font-family:      var(--font-body);
+  font-size:        var(--font-size-base);
+  line-height:      var(--line-height-base);
+  color:            var(--pi-body);
+  background-color: var(--pi-body-bg);
+  margin: 0em 2em;
+  padding: 0;
+}
+
+/* Headings — colour tokens only, no layout */
+h1, h2 { color: var(--hi1); }
+h3, h4 { color: var(--hi2); }
+h5, h6 { color: var(--hi3); }
+
+/* h6 is used for summary text & subheadings, not structural headings */
+h6 { font-size: 0.8em; font-weight: medium; font-style: italic; }
+
+/* Links — hi4 dimmed in light mode, brightened in dark mode */
+a {
+  color: var(--pi-link);
+}
+
+/* Inline code — uses --pi-code derived token */
+code {
+  color: var(--pi-code);
+}
+
+/* HR — animated rainbow (keyframes in section 11) */
+hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, hsl(0, 100%, 50%), hsl(180, 100%, 50%));
+  animation: hue-rotate 10s linear infinite;
+}
+
+/* Table header — bare override needed for markdown-authored tables */
+th {
+  background-color: var(--hi2);
+  color: var(--bg2);
+}
+
+
+/*  ______   _                _         _______   ______   ______                                                    */
+/* (_____ \ (_)              (_)       (_______) / _____) / _____)                                                   */
+/*  _____) ) _   ____  ____   _   ____  _       ( (____  ( (____                                                     */
+/* |  ____/ | | / ___)|  _ \ | | / ___)| |       \____ \  \____ \                                                    */
+/* | |      | |( (___ | | | || |( (___ | |_____  _____) ) _____) )                                                   */
+/* |_|      |_| \____)|_| |_||_| \____) \______)(______/ (______/                                                    */
+/* ≡≡≡  4. PicnicCSS overrides  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/* Rules that target PicnicCSS class names to adapt them to the pihuw palette.                                       */
+
+/* Base card — neutral component surface */
+.card { background-color: var(--pi-bg); }
+
+/* Highlight cards — .hi1 through .hi4 map to the four named highlight colours */
+.card.hi1 { color: var(--hi1); background-color: var(--bg1); }
+.card.hi2 { color: var(--hi2); background-color: var(--bg2); }
+.card.hi3 { color: var(--hi3); background-color: var(--bg3); }
+.card.hi4 { color: var(--hi4); background-color: var(--bg4); }
+
+/* Button — override PicnicCSS default with pihuw highlight colour */
+.button {
+  background-color: var(--hi1);
+}
+
+/* Breadcrumb — PicnicCSS component, overridden here for layout */
+.breadcrumb {
+  margin-top: 3.5em;
+  height: 1em;
+  border: none;
+  box-shadow: none;
+  text-align: center;
+}
+
+
+/*                       _                       _                                                                   */
+/*                      (_)                 _   (_)                                                                  */
+/*  ____   _____  _   _  _   ____  _____  _| |_  _   ___   ____                                                      */
+/* |  _ \ (____ || | | || | / _  |(____ |(_   _)| | / _ \ |  _ \                                                     */
+/* | | | |/ ___ | \ V / | |( (_| |/ ___ |  | |_ | || |_| || | | |                                                    */
+/* |_| |_|\_____|  \_/  |_| \___ |\_____|   \__)|_| \___/ |_| |_|                                                    */
+/*                         (_____|                                                                                   */
+/* ≡≡≡  5. Navigation  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+.pi-nav {
+  color: var(--hi1);
+  background-color: var(--pi-bg);
+  margin: 0 15%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  bottom: 3.5em;   /* pushes page content below the fixed nav bar */
+}
+
+.pi-nav-pad {
+  /* padding to drop below the fixed nav bar — overridden in media queries below */
+  padding-top: 0.3em;
+}
+
+nav .pi-nav-brand {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+nav .pi-nav-brand .logo {
+  flex-shrink: 2;
+  margin: 0 0.5em 0 0;
+}
+
+nav .pi-nav-brand .title {
+  flex-shrink: 8;
+  margin: 0;
+  display: block;
+  object-fit: contain;
+}
+
+nav .pi-nav-brand .logo img {
+  /* force the image (especially SVG) to fit the bounding box */
+  flex: 'flex-shrink';
+  height: 100%;
+  object-fit: contain;
+}
+
+nav div.view-w div.menu {
+  color: var(--hugo-theme-color);
+}
+
+/* Wide menu visible by default; narrow menu hidden */
+.pi-menu-w { display: flex; }
+.pi-menu-n { display: none; }
+
+/* On medium screens (≤ --break-m = 800px) increase nav padding */
+@media screen and (max-width: 800px) {
+  .pi-nav-pad { padding-top: 3.5em; }
+}
+
+/* On small screens (≤ --break-s = 500px) increase nav padding further */
+@media screen and (max-width: 500px) {
+  .pi-nav-pad { padding-top: 6em; }
+}
+
+/* Logo colour tokens */
+.logo-pi { color: var(--pi-teal); }
+.logo-hu { color: var(--hugo-theme-color); }
+.logo-w  { color: var(--logo-w); }
+
+/* Site title text in the menu */
+#siteTitleMenu {
+  font-weight: bold;
+  color: var(--hi3);
+  margin-top: auto;
+  vertical-align: middle;
+}
+
+/* Dropdown navigation */
+.dropbtn {
+  background-color: var(--hi1);
+  color: white;
+  padding: 16px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: var(--bg3);
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  right: 0;
+}
+
+.dropdown-content a {
+  color: var(--pi-body);
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-content a:hover   { background-color: var(--hi1); }
+.dropdown:hover .dropdown-content { display: block; }
+.dropdown:hover .dropbtn    { background-color: var(--bg3); }
+
+/* Theme toggle button — icon colour reflects current state */
+[data-theme-toggle][data-theme-state="system"] i { color: var(--pi-meta); }
+[data-theme-toggle][data-theme-state="light"]  i { color: var(--hi1); }  /* warm sun */
+[data-theme-toggle][data-theme-state="dark"]   i { color: var(--hi4); }  /* cool moon */
+
+
+/*                                _                                                                                  */
+/*                               | |                                _                                                */
+/*  ____   _____   ____  _____   | |  _____  _   _   ___   _   _  _| |_                                              */
+/* |  _ \ (____ | / _  || ___ |  | | (____ || | | | / _ \ | | | |(_   _)                                             */
+/* | |_| |/ ___ |( (_| || ____|  | | / ___ || |_| || |_| || |_| |  | |_                                              */
+/* |  __/ \_____| \___ ||_____)   \_)\_____| \__  | \___/ |____/    \__)                                             */
+/* ≡≡≡  6. Page layout  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+/* ≈≈≈≈  6. 1 page-title ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈ */
+main div.page-title {
+  background-color: var(--bg2);
+  border-radius: 0.5em;
+  border: solid 1px var(--hi2);
+  align-items: center;
+  padding: .2em;
+}
+
+/* ≈≈≈≈  6. 2 Blocks ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈ */
+section > div.block, section {
+  align-items: stretch;
+}
+
+div .src.block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+div .src.block img {
+  max-width: 100%;
+  height: auto;
+}
+
+div .txt.block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.txt.block .card {
+  padding: 0.3em;
+}
+
+.block-hr {
+  height: 3px;
+  border: none;
+  color: rgb(60, 90, 180);
+  background-color: rgb(255, 90, 180);
+}
+
+/* ≈≈≈≈  6. 3 Features ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈ */
+
+div.feature-group div.feature {
+  margin: 0.3em;
+  border-radius: 0.5em;
+  padding: 1px;
+  border: solid 1px var(--hi1);
+  background-color: var(--pi-bg);
+  text-align: center;
+  max-width: 24%;
+}
+
+div.feature .header {
+  color: var(--hi1);
+  /* font-size: 1.2em; */
+  font-weight: bold;
+}
+
+div.feature img{
+  max-width: 80%;
+  height: auto;
+  border-radius: 0.3em;
+  border: solid 1px var(--bg2);
+}
+
+div.feature footer.caption {
+  font-size: smaller;
+  color: var(--hi2);
+  font-style: italic;
+  background-color: var(--bg2);
+}
+
+/* ≈≈≈≈  6. 4 Footer ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈ */
+section footer {
+  text-align: center;
+  font-size: smaller;
+  font-style: italic;
+  color: var(--hi2);
+}
+
+/* Reading time — simplified from over-specific #block-1>div>div.fifth>footer selector */
+.pi-reading-time {
+  font-size: 80%;
+  color: var(--hi3);
+}
+
+
+/*                                                                                                        */
+/*    ____                                                   _                                            */
+/*   / ___|___  _ __ ___  _ __   ___  _ __   ___ _ __ | |_ ___                                          */
+/*  | |   / _ \| '_ ` _ \| '_ \ / _ \| '_ \ / _ \ '_ \| __/ __|                                        */
+/*  | |__| (_) | | | | | | |_) | (_) | | | |  __/ | | | |_\__ \                                         */
+/*   \____\___/|_| |_| |_| .__/ \___/|_| |_|\___|_| |_|\__|___/                                         */
+/*                        |_|                                                                             */
+/* ≡≡≡  7. Components  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+/* ── Banner ───────────────────────────────────────────────────────────────────────────────────────── */
+.banner {
+  display: block;
+  text-align: center;
+  color: var(--hi3);
+  background-color: hsl(from var(--hi3) h s 95%);
+  font-size: 1.3em;
+  padding: 0.5em;
+  width: 100%;
+}
+
+.banner .text   { color: var(--hi2); flex-grow: 1; }
+.banner .header { font-weight: bolder; flex-grow: 1; }
+
+/* ── Footer ───────────────────────────────────────────────────────────────────────────────────────── */
+.footer {
+  display: inline-flex;
+  flex-flow: wrap;
+  align-items: center;
+  color: var(--mrx-skin);
+  background-color: var(--mrx-green);
+  font-size: 0.7em;
+  padding: 1px;
+}
+
+.footer .left   { text-align: center; flex-grow: 1; }
+.footer .middle { text-align: center; flex-grow: 4; }
+.footer .right  { text-align: center; flex-grow: 2; }
+
+.footer .left .label,
+.footer .middle .label,
+.footer .right .label {
+  color: var(--mrx-green);
+  background-color: hsl(from var(--mrx-green) h 20% 60%);
+  margin: 1px;
+  padding: 1px;
+  font-size: 1em;
+}
+
+.footer .label > a       { color: var(--mm-purple); opacity: 1; }
+.footer .label > a:hover { color: red; }
+
+/* CSS relative-colour replacements for lighten() SCSS calls */
+.pi-footer-label { color: hsl(from var(--mm-purple) h s calc(l + 40%)); }
+.pi-footer-title { color: hsl(from var(--mrx-green) h s calc(l + 40%)); font-size: 1.2em; }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────────────────────────────── */
+/* NOTE: bare `sidebar` selector is intentional — <sidebar> is a custom HTML element used             */
+/* in blog/section.html as `<sidebar class="four-fifth">`. Do not rename to .sidebar.                 */
+sidebar {
+  display: inline-flex;
+  color: var(--hi2);
+  background-color: var(--bg2);
+  border: 1px solid var(--hi2);
+  border-radius: 0.5em;
+  padding: 0.6em;
+  height: 100%;
+}
+
+.childbar-horizontal {
+  padding: 0.3em 1em;
+  text-align: center;
+  width: 100%;
+}
+
+.childbar-horizontal .divider {
+  color: var(--hi1);
+  font-weight: bold;
+}
+
+/* ── Definition block ─────────────────────────────────────────────────────────────────────────────── */
+.definition-block .card {
+  border: 0px;
+  border-left: 0.2em solid;
+  border-color: var(--hi2);
+  background-color: var(--bg2);
+}
+
+.definition-block .card header {
+  color: var(--hi2);
+}
+
+/* ── Accordion / Tab ──────────────────────────────────────────────────────────────────────────────── */
+.tab {
+  position: relative;
+}
+
+.tab input {
+  position: absolute;
+  opacity: 0;
+  z-index: -1;
+}
+
+.tab__content {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.35s;
+}
+
+.tab input:checked ~ .tab__content {
+  max-height: 100%;
+}
+
+.accordion {
+  border-left: 1px solid lightgray;
+  border-radius: none;
+  overflow: hidden;
+}
+
+.tab__label,
+.tab__close {
+  display: flex;
+  background: var(--theme);
+  cursor: pointer;
+  padding: 0;
+}
+
+.tab__label {
+  justify-content: flex-start;
+  gap: 0.35em;
+  padding: 0.2rem 0.1rem;
+}
+
+.tab__label::after       { content: none; }
+.tab__label:hover::after { animation: none; }
+
+/* FA disclosure icons — right-chevron when closed, down-chevron when open */
+.pi-tog-o { display: none;   color: var(--hi1); }
+.pi-tog-c { display: inline; color: var(--hi2); }
+.tab input:checked + .tab__label .pi-tog-o { display: inline; }
+.tab input:checked + .tab__label .pi-tog-c { display: none; }
+
+.tab__content p {
+  margin: 0;
+  padding: 0.2rem 1rem;
+}
+
+.tab__close {
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+}
+
+.accordion--radio {
+  --theme: var(--secondary);
+}
+
+/* Arrow animation on FA icon (keyframes in section 11) */
+.tab input:not(:checked) + .tab__label:hover .pi-tog-c {
+  animation: bounce .5s infinite;
+}
+
+
+/*                                                   _                                                               */
+/*    _                                             (_)                                                              */
+/*  _| |_  _____  _   _   ___   ____    ___   ____   _  _____   ___                                                  */
+/* (_   _)(____ |( \ / ) / _ \ |  _ \  / _ \ |    \ | || ___ | /___)                                                 */
+/*   | |_ / ___ | ) X ( | |_| || | | || |_| || | | || || ____||___ |                                                 */
+/*    \__)\_____|(_/ \_) \___/ |_| |_| \___/ |_|_|_||_||_____)(___/                                                  */
+/* ≡≡≡  8. Taxonomies & labels  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/* Taxonomy colour classes — assigned by tmpl/taxonomy-display-class.html (ordinal position).                       */
+/* Selectors no longer require .ui. prefix — tool/label.html emits <span class="label label-X">.                    */
+
+.pi-tax-1.label {
+  background: hsl(from var(--hi3) h s 95%);
+  backdrop-filter: 200%;
+  border-color: var(--hi3);
+  color: var(--hi3);
+}
+
+.pi-tax-2.label {
+  background: hsl(from var(--hi2) h s 95%);
+  border-color: var(--hi2);
+  color: var(--hi2);
+}
+
+.pi-tax-3.label {
+  background: hsl(from var(--hi1) h s 95%);
+  border-color: var(--hi1);
+  color: var(--hi1);
+}
+
+.pi-tax-4.label {
+  background: hsl(from var(--hi4) h s 95%);
+  border-color: var(--hi4);
+  color: var(--hi4);
+}
+
+/* Flex layouts for taxonomy tag rows */
+.pi-flex-with-tags {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.pi-flex-title-tags {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Blog label pill */
+.label-blog {
+  background-color: var(--mm-green);
+  color: hsl(0, 0%, 95%);
+  font-weight: bold;
+  padding: 0.2em 1em;
+  border-radius: 0.2em;
+}
+
+/* Meta line — reading time, date, category */
+.meta {
+  font-size: 80%;
+  font-weight: lighter;
+  font-style: italic;
+  color: var(--pi-meta);
+  display: inline;
+}
+
+.meta .date     { color: var(--hi1); }
+.meta .category { color: var(--hi2); }
+
+
+/*                                                                                                        */
+/*   __  __          _ _                                                                                  */
+/*  |  \/  | ___  __| (_) __ _                                                                           */
+/*  | |\/| |/ _ \/ _` | |/ _` |                                                                          */
+/*  | |  | |  __/ (_| | | (_| |                                                                          */
+/*  |_|  |_|\___|\__,_|_|\__,_|                                                                          */
+/*                                                                                                        */
+/* ≡≡≡  9. Media  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+.image {
+  padding: 1em;
+}
+
+section img {
+  display: inline;
+  height: 70%;
+  object-fit: contain;
+}
+
+main footer.caption {
+  font-style: italic;
+  font-weight: bold;
+  color: var(--hi1);
+  background-color: var(--bg3);
+  text-align: center;
+}
+
+
+/*                                                                                                        */
+/*    ____                 _                                                                              */
+/*   / ___|_ __ __ _ _ __ | |__                                                                          */
+/*  | |  _| '__/ _` | '_ \| '_ \                                                                         */
+/*  | |_| | | | (_| | |_) | | | |                                                                        */
+/*   \____|_|  \__,_| .__/|_| |_|                                                                        */
+/*                  |_|                                                                                   */
+/* ≡≡≡ 10. Graph  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/* Chart.js container — --graph-c* palette vars are defined in section 1b and read by JS.              */
+
+.hw-graph {
+  display: block;
+  width: 100%;
+  min-height: 80px;   /* fallback; real height set inline by the partial */
+}
+
+.hw-graph-error {
+  color: var(--hi2);
+  border: 1px solid var(--hi2);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+
+/*                                                                                                        */
+/*     _          _                 _   _                                                                 */
+/*    / \   _ __ (_)_ __ ___   __ _| |_(_) ___  _ __  ___                                               */
+/*   / _ \ | '_ \| | '_ ` _ \ / _` | __| |/ _ \| '_ \/ __|                                             */
+/*  / ___ \| | | | | | | | | | (_| | |_| | (_) | | | \__ \                                              */
+/* /_/   \_\_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/                                             */
+/*                                                                                                        */
+/* ≡≡≡ 11. Animations  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+@keyframes bounce {
+  25% { transform: translateX( .2rem); }
+  75% { transform: translateX(-.2rem); }
+}
+
+@keyframes hue-rotate {
+  0%   { filter: hue-rotate(0deg);   }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* ── Responsive view classes ──────────────────────────────────────────────────────────────────────── */
+/* .view-s/m/w toggle which element is shown at each breakpoint.                                       */
+/* Breakpoints must match --break-s (500px) and --break-m (800px) in section 1d.                      */
+
+/* Default (wide): show wide, hide narrow and medium */
+.view-s { display: none; }
+.view-m { display: none; }
+.view-w { display: flex; }
+
+/* Medium screens (≤ --break-m = 800px): show medium, hide wide */
+@media screen and (max-width: 800px) {
+  .view-s { display: none; }
+  .view-m { display: flex; }
+  .view-w { display: none; }
+}
+
+/* Small screens (≤ --break-s = 500px): show small, hide medium and wide */
+@media screen and (max-width: 500px) {
+  .view-s { display: flex; }
+  .view-m { display: none; }
+  .view-w { display: none; }
+}

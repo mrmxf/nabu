@@ -1,0 +1,135 @@
+# Nabu embedded configuration. Loaded from the embedded filesystem at startup via
+# github.com/mrmxf/util/kfg (koanf). Values here are compiled into the binary; a
+# deployment can still override them with an external .konfig.yaml if kfg merging
+# is enabled.
+
+# Default navbar logo (top-left). Served by basename from the site root, so
+# "logo-nabu.svg" resolves to /logo-nabu.svg (file: nabu/web/static/logo-nabu.svg).
+# A course or lesson that sets params.logo in its _index.md overrides this while it
+# is on screen. Seeded into the app_config `site_logo` row by `nabu seed`.
+logopath: logo-nabu.svg
+
+# ── Demo mode ────────────────────────────────────────────────────────────────
+# Whether `nabu seed` spawns the well-known demo accounts (students, teacher and
+# app-admin) from the demo roster (course.demo_roster). Seeded into the
+# app_config `demo_mode` row so the SPA can read it.
+#   true  — seed the demo accounts (the default for the Phase 2 funding demo)
+#   false — do NOT create them; on a real deployment set this false and provide
+#           real accounts. If demo accounts linger from an earlier demo seed, the
+#           login page shows a warning banner (see internal/httpapi/demo.go).
+demo_mode: false
+
+# ── Course files ─────────────────────────────────────────────────────────────
+# Where the course keeps its files. A course repo carries a nabu.yaml (found via
+# `-c <file>`, `-C <course dir>`, or ./nabu.yaml) that overrides any of these;
+# every path is relative to the file that sets it. Flags such as
+# `seed --content` override both.
+course:
+  content: content                        # content/<course>/<lesson>/<slide>.md
+  assets: assets                          # Hugo-style assets, published to pb_public
+  schedules: content/lesson-schedules.yaml # cohort schedules pre-load (skipped if absent)
+  # The demo roster. Empty => the course-neutral default embedded in
+  # internal/demo/demo_mode.yaml (accounts that enrol in no course).
+  demo_roster: ""
+
+# ── Classroom fast login ─────────────────────────────────────────────────────
+# A stopgap for live lessons: while this is on AND a Session is inside its
+# enrolment window, /login shows a single "your name" box. The student is signed
+# in immediately — their account is created on first use as
+# `<name>-<session-slug>` with no email and a random password they never see.
+# Seeded into the app_config `classroom_fast_login` row (see
+# internal/httpapi/classroom.go and docs/classroom-fast-login.md).
+#
+# TRADEOFF: with no password, anyone who can reach the site can join the open
+# Session under any name, including a classmate's. It is therefore OFF by
+# default, works only while a Session is enrollable, and can never authenticate
+# a teacher/admin account. Turn it on for the lesson, turn it off afterwards.
+#   false — normal username/email + password sign-in only (the default)
+#   true  — name-only classroom sign-in, with a "Staff sign-in" link to the
+#           normal form
+classroom_fast_login: false
+
+# ── Sign-up ──────────────────────────────────────────────────────────────────
+# Controls the public self-signup page (/signup). Seeded into the app_config
+# `signup_require_email` row by `nabu seed`, which the signup form reads.
+signup:
+  # Whether a new account must supply an email address.
+  #   false — email is OPTIONAL; a student can sign up with just a username + password
+  #   true  — email is required (e.g. once email verification / password reset is on)
+  require_email: false
+
+# ── AI back-ends ─────────────────────────────────────────────────────────────
+# Which AI back-ends this deployment exposes. On a single 16GB GPU box, Stable
+# Diffusion (an image agent's "make an image" mode) and Ollama compete for the same VRAM;
+# running both resident thrashes the card, so image generation is OFF by default.
+# `stable-diffusion.enabled` is seeded into the app_config `images_enabled` row,
+# which the SPA reads to hide every image surface (the image slide, the
+# per-group image budget teacher card, and the "make an image" options) and which
+# the job API enforces (an image submit is refused while disabled).
+ai:
+  ollama:
+    # The text-agent back-end. Currently always on — modelled here for symmetry;
+    # disabling it is not wired up yet.
+    enabled: true
+  stable-diffusion:
+    # the txt2img image back-end (see docs/image-server-setup.md). Turn this on
+    # only once the image server has its own VRAM headroom (a second GPU/host, or
+    # Ollama sized down to leave room) — see docs/image-server-setup.md §0.
+    enabled: false
+
+admin:
+  s3:
+    # Filename (within nabu/embedfs) of the CORS policy applied by
+    # `nabu admin s3 set-cors`. Keep the policy in its own JSON file so it can be
+    # audited and reused with the aws CLI, and point to it from here.
+    cors-configfile: s3-cors-config.json
+
+# ── PocketBase settings scaffold ─────────────────────────────────────────────
+# Placeholder shape for driving PocketBase's own Settings (app identity, mail,
+# backups) from config rather than the dashboard. These are PLACEHOLDERS and are
+# not applied yet — fill them in when the apply step lands.
+#
+# Secrets are never stored here. Where a value is sensitive, `password_env` names
+# the environment variable (injected by Infisical) that holds it; nabu reads the
+# secret from that variable at runtime, so this file stays safe to commit.
+pocketbase:
+  # Settings > Application
+  app:
+    name: Nabu
+    url: https://nabu.example
+
+  # Initial superuser (PocketBase _superusers). `nabu admin validate` passes the
+  # superuser gate if a _superusers record already exists, OR if this email is set
+  # and its password_env var is present (so one can be created). The password
+  # itself is never stored here — password_env names the env var that holds it.
+  superuser:
+    email: admin@nabu.example
+    password_env: NABU_SUPERUSER_PW
+
+  # Settings > Mail (SMTP). The password comes from the named env var, not here.
+  smtp:
+    enabled: false
+    host: smtp.nabu.example
+    port: 587
+    username: no-reply@nabu.example
+    password_env: NameOfPasswordEnvVariable
+    tls: true
+    sender_name: Nabu
+    sender_address: no-reply@nabu.example
+
+  # Settings > Backups — automatic backups to an S3-compatible store. The secret
+  # key comes from the named env var; the access-key id is an identifier, not a
+  # secret, so it can sit in the file.
+  backups:
+    s3:
+      enabled: false
+      bucket: nabu-backups
+      region: eu-west-1
+      endpoint: https://s3.nabu.example
+      access_key: your-s3-access-key-id
+      password_env: NameOfS3PasswordEnvVariable
+      force_path_style: true
+    # Backup schedule. Enabling S3 does NOT imply a schedule — set the cron
+    # explicitly (5-field). Leave empty for manual backups only.
+    cron: "0 3 * * *"   # daily at 03:00
+    cron_max_keep: 7    # keep the most recent N backups

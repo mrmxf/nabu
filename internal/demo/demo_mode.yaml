@@ -1,0 +1,72 @@
+# Default demo-mode roster — the accounts `nabu seed` spawns when demo_mode is ON
+# and the config sets no `course.demo_roster`. It is course-neutral: the accounts
+# enrol in no course, so a course supplies its own roster to demo with.
+#
+# This is the single source of truth for the Phase 2 demo principals: the demo
+# students, the demo teacher, the demo app-admin, AND the demo dashboard
+# superuser. They are all applied through the SAME user-import path
+# (internal/students.Apply) — there is no separate superuser seeder.
+#
+# The seed only applies this file when nabu-config.yaml `demo_mode: true`; when
+# demo_mode is off none of these accounts are created, and the login page warns
+# if any are still registered from an earlier demo seed.
+#
+# Records live under the top-level `users:` key (the roster envelope). Two fully
+# commented examples follow — a student (alice) and the superuser — then the
+# remaining accounts in minimal form.
+
+users:
+  # ── Full example: a student ───────────────────────────────────────────────
+  - uid: s7g1-alice # stable match key you assign; matching is by uid, so the
+                    # email can change later without breaking the account. Never
+                    # reuse a uid.
+    email: alice@nabu.example # sign-in identity (a username/uid also works).
+    name: Alice # display name.
+    role: student # student | teacher | admin | superuser.
+    # courses: [my-course] # enrols into these course slugs (per-course role is
+    #                       # derived from `role`). Omitted here: the engine
+    #                       # default knows no course. A course enrols its demo
+    #                       # users by pointing `course.demo_roster` at its own file.
+    password: secret1234 # demo literal — fine for a local funding demo, never
+                         # for production. For a real account use `password_env`
+                         # (see the superuser below) so no secret is committed.
+    verified: true # skip email verification for the demo.
+
+  # ── Full example: the dashboard superuser (_superusers, the /_/ admin) ─────
+  - email: admin@nabu.example # the superuser's login email.
+    role: superuser # routes this entry to the _superusers collection instead of
+                    # `users`. Superusers take no `uid`, `courses` or `verified`.
+    password_env: NABU_SUPERUSER_PW # NO literal password. The seed reads the
+                                    # password from this environment variable,
+                                    # injected by Infisical:
+                                    #   infisical run --env prod -- nabu seed
+                                    # If the variable is unset the superuser is
+                                    # skipped (an existing one is left untouched),
+                                    # so a dev box is never locked out of /_/.
+
+  # ── Remaining demo accounts (minimal) ─────────────────────────────────────
+  - uid: s7g1-ben
+    email: ben@nabu.example
+    name: Ben
+    role: student
+    password: secret1234
+    verified: true
+  - uid: s7g1-cara
+    email: cara@nabu.example
+    name: Cara
+    role: student
+    password: secret1234
+    verified: true
+  - uid: teacher-tom
+    email: tom@nabu.example
+    name: Tom
+    role: teacher
+    password: secret1234
+    verified: true
+  - uid: admin-ada # app-level admin (role=admin) — exercises the /admin page and
+                   # the role=admin API guard without being a dashboard superuser.
+    email: ada@nabu.example
+    name: Ada
+    role: admin
+    password: secret1234
+    verified: true

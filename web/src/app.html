@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<!-- SVG favicon for modern browsers; PNG fallback for Safari/older iPad;
+		     apple-touch-icon (solid tile) for the iOS home-screen bookmark. -->
+		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/logo-nabu.svg" />
+		<link rel="icon" type="image/png" sizes="180x180" href="%sveltekit.assets%/favicon.png" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Nabu</title>
+		<!-- theme-init: restore the saved tri-state theme before first paint (no FOUC).
+		     "light"/"dark" set data-theme on <html>; "system" leaves it unset so the
+		     prefers-color-scheme block in nabu.css decides. Paired with ThemeToggle. -->
+		<script>
+			try {
+				var t = localStorage.getItem('nabu-theme');
+				if (t === 'light' || t === 'dark')
+					document.documentElement.setAttribute('data-theme', t);
+			} catch (e) {}
+		</script>
+		<!-- FontAwesome 7.3.0 Free (icons) via CDN — global. jsDelivr serves 7.3.0
+		     (cdnjs lags at 7.0.1). Vendor locally only for an offline deploy. -->
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.0/css/all.min.css"
+		/>
+		<!-- Google Fonts: Raleway (headings), KoHo (body), Ubuntu Mono (code). -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=KoHo:wght@300;400;600&family=Raleway:wght@400;600;700&family=Ubuntu+Mono:wght@400;700&display=swap"
+		/>
+		<!-- Nabu design tokens (Mesopotamian palette + persona highlights). Served
+		     from static/; must load so --nabu-* custom properties are available. -->
+		<link rel="stylesheet" href="/nabu.css" />
+		<!-- Syntax highlighting: speed-highlight (github theme) via jsDelivr. Two
+		     sheets tracked to the OS light/dark preference — matches how nabu.css
+		     itself themes today (prefers-color-scheme; no manual toggle wired yet). -->
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/@speed-highlight/core@1.2.17/dist/themes/github-light.css"
+			media="(prefers-color-scheme: light)"
+		/>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/@speed-highlight/core@1.2.17/dist/themes/github-dark.css"
+			media="(prefers-color-scheme: dark)"
+		/>
+		<!-- goldmark emits <pre><code class="language-x">, which speed-highlight does
+		     not auto-detect (it wants shj-lang-* classes). Bridge each code block
+		     through highlightElement, and re-run on SPA-injected slide content. -->
+		<script type="module">
+			import { highlightElement } from 'https://cdn.jsdelivr.net/npm/@speed-highlight/core@1.2.17/dist/index.js';
+			const seen = new WeakSet();
+			function highlight(root) {
+				const blocks = (root.querySelectorAll ? root : document).querySelectorAll(
+					'pre > code[class*="language-"]'
+				);
+				for (const code of blocks) {
+					const pre = code.parentElement;
+					if (seen.has(pre)) continue;
+					seen.add(pre);
+					const lang = (code.className.match(/language-([\w-]+)/) || [])[1] || 'plain';
+					highlightElement(pre, lang, 'multiline').catch(() => seen.delete(pre));
+				}
+			}
+			const run = () => highlight(document);
+			if (document.readyState === 'loading')
+				document.addEventListener('DOMContentLoaded', run);
+			else run();
+			// Slide bodies arrive via {@html}; catch them as they mount.
+			let queued = false;
+			new MutationObserver(() => {
+				if (queued) return;
+				queued = true;
+				requestAnimationFrame(() => {
+					queued = false;
+					run();
+				});
+			}).observe(document.documentElement, { childList: true, subtree: true });
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

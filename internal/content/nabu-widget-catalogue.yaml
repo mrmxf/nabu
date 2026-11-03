@@ -1,0 +1,619 @@
+# LMS widget catalogue — the single source of truth for inline `{{< LMS >}}`
+# shortcodes. Authored in YAML but shaped as JSON Schema: a top-level map keyed
+# by the widget type `t`, whose value is a JSON Schema describing that widget's
+# params. This shape is deliberate — it is directly consumable by JSON Schema
+# tooling (ajv, @jsonforms, Monaco/CodeMirror) so a future realtime lesson editor
+# gets autocomplete + auto-generated teacher forms for free.
+#
+# Consumed by:
+#   - Go   (go:embed here) — validates each <lms> payload at ingest and stamps
+#          the slide's `content` status (OK|WARNINGS|ERRORS).
+#   - Hugo (mirrored to data/nabu-widget-catalogue.yaml) — the LMS.html shortcode template.
+#   - the client — served as JSON to drive hydration + the eventual editor.
+#
+# The Go/TS `t -> code` maps bind to real components; only the arg *schemas* live
+# here. A test asserts those maps cover exactly the `t` keys below.
+
+version: 1
+
+widgets:
+  timer:
+    title: Countdown timer
+    description: A countdown shown inline in the slide body.
+    type: object
+    properties:
+      start:
+        title: Start trigger
+        description: When the countdown begins.
+        type: string
+        enum: [onshow, onclick]
+        default: onshow
+      duration:
+        title: Duration
+        description: Length as mm:ss or hh:mm:ss.
+        type: string
+        pattern: "^[0-9]+:[0-5][0-9](:[0-5][0-9])?$"
+      label:
+        title: Label
+        description: Text shown beside the clock.
+        type: string
+        default: Timer
+    required: [duration]
+
+  figure:
+    title: Figure
+    description: An image with an optional caption.
+    type: object
+    properties:
+      src:
+        title: Image source
+        description: Page-bundle-relative or absolute image path.
+        type: string
+      alt:
+        title: Alt text
+        description: Accessible description of the image.
+        type: string
+        default: ""
+      caption:
+        title: Caption
+        description: Optional caption rendered under the image.
+        type: string
+        default: ""
+    required: [src]
+
+  choice:
+    title: Multiple choice
+    description: >-
+      Renders a named choice group at this point in the slide body. The options
+      themselves live under the slide's `t_choice` frontmatter and are referenced
+      here by `id` — this keeps bulky option lists in frontmatter (small,
+      readable diffs) while the shortcode controls only placement.
+    type: object
+    # default_value_key names the option field a `print` widget shows for this
+    # type when the group doesn't override it. Checked at seed (must be a real
+    # option field: key|label|slug).
+    default_value_key: slug
+    properties:
+      id:
+        title: Choice id
+        description: Must match an `id` under the slide's `t_choice` frontmatter.
+        type: string
+    required: [id]
+
+  print:
+    title: Print a stored value
+    description: >-
+      Renders, inline as text, a value for the current session (so one workshop
+      never bleeds into another). `from` names either a `t_choice` id — printing
+      that group's chosen value — or a built-in: `username` (signed-in name),
+      `email`, `group` (the session's group tag), `session` (the session name).
+      For a choice it shows the group's default_value_key (usually the slug) unless
+      `show` overrides it. A dangling `from` renders nothing.
+    type: object
+    properties:
+      from:
+        title: Source
+        description: A `t_choice` id, or a built-in — username | email | group | session.
+        type: string
+      show:
+        title: Field to show
+        description: Which resolved field to print; defaults to the choice's default_value_key.
+        type: string
+        enum: [label, slug, key]
+    required: [from]
+
+  nabu-info:
+    title: Nabu version info
+    description: >-
+      Renders the running Nabu instance's build identity, read live from the
+      `nabu` table. Terse by default (version + short hash); `verbose="true"`
+      shows the full list (tag, hash, build date/flavour, OS/arch). Handy on a
+      help/about page.
+    type: object
+    properties:
+      verbose:
+        title: Verbose
+        description: Show the full details table instead of the terse one-liner.
+        type: string
+        enum: [true, false]
+        default: false
+    required: []
+
+  callout:
+    title: Callout box (paired container)
+    description: >-
+      Opens a styled box that wraps the content after it, up to a matching
+      `{{< /LMS >}}`. `header` is an optional bold title; `style` picks the look.
+      The chrome styles are `notepad` (a light, faintly blue-ruled panel),
+      `prompt` (a gainsboro panel of dark-green mono text for showing AI system
+      prompts) and `cli-output` (a terminal-style panel for real/demo output);
+      `prompt` and `cli-output` render `header` as a faux Apple Mac title bar.
+      The semantic styles — `intro`, `note`, `tip`, `tips`, `warning`, `discuss` —
+      are tinted panels whose colour comes from the course theme (`_course.css`),
+      so a course restyles them all by editing its palette. Leave blank lines
+      around the wrapped content so its Markdown renders.
+    type: object
+    properties:
+      header:
+        title: Header
+        description: Optional bold title shown at the top of the box.
+        type: string
+      style:
+        title: Style
+        description: >-
+          The callout look. Chrome styles (notepad, prompt, cli-output) are
+          themed by Nabu; semantic styles (intro, note, tip, tips, warning,
+          discuss) take their colour from the course stylesheet.
+        type: string
+        enum: [notepad, prompt, cli-output, intro, note, tip, tips, warning, discuss]
+        default: notepad
+    required: []
+
+  include:
+    title: Include a Markdown partial
+    description: >-
+      Splices another Markdown file from this lesson into the slide at this point.
+      Unlike every other widget this is NOT rendered in the browser — the file's
+      text is spliced into the source before conversion, so it behaves exactly as
+      if it had been typed into the slide. That is what makes a shared
+      `_references.md` of Markdown link reference definitions
+      (`[zapier]: https://zapier.com`) work: those definitions only resolve within
+      a single document, so every slide writing `[Zapier][zapier]` must include
+      the file. `from` is resolved in the slide's own folder first, then the
+      lesson folder, and may not escape the lesson. `only` narrows the splice to
+      named link keys when a slide wants a short visible list. Must be on its own
+      line. Includes do not nest. A missing file warns and splices nothing.
+    type: object
+    properties:
+      from:
+        title: Partial to include
+        description: >-
+          Path relative to the slide's folder or the lesson folder, conventionally
+          a control file such as `_references.md`.
+        type: string
+      only:
+        title: Only these keys
+        description: >-
+          Space-separated link reference keys to keep, e.g. "zapier n8n". Omit to
+          include the whole file.
+        type: string
+    required: [from]
+
+  postit:
+    title: Post-it note (paired container)
+    description: >-
+      Opens a draggable, minimisable sticky note that wraps the content after it,
+      up to a matching `{{< /LMS >}}`. `color` is the note background (any CSS
+      colour — a name, hex, or `oklch(…)`); the banner (20% darker) and text
+      colours are derived from it. `header` is the banner text and doubles as the
+      drag handle. `subtype` tunes the layout for the content: omit it to just
+      apply the colour, `list` for a bulleted/numbered list, `code` for a fenced
+      code block. Leave blank lines around the wrapped content so its Markdown renders.
+    type: object
+    properties:
+      color:
+        title: Background colour
+        description: Any CSS colour for the note background (name, hex or oklch()).
+        type: string
+      subtype:
+        title: Subtype
+        description: Layout tuning for the wrapped content. Omit for a plain note.
+        type: string
+        enum: [list, code]
+      header:
+        title: Header
+        description: Banner text; the banner is also the drag handle.
+        type: string
+    required: [color]
+
+  tabulate:
+    title: Tabulate a derived list
+    description: >-
+      Renders, as an HTML table, the list a `t_mapper` derived under the id named
+      by `from` — i.e. the bulk-data rows selected by the student/group's choice.
+      Columns are inferred from the selected rows (or the mapper's `columns`).
+      Updates live with the choice; renders nothing until a value exists.
+    type: object
+    properties:
+      from:
+        title: Source mapper id
+        description: The `t_mapper` id whose derived rows to tabulate.
+        type: string
+    required: [from]
+
+  note:
+    title: Callout note
+    description: A highlighted callout box.
+    type: object
+    properties:
+      tone:
+        title: Tone
+        description: Visual style of the callout.
+        type: string
+        enum: [info, tip, warning]
+        default: info
+      text:
+        title: Text
+        description: The callout body text.
+        type: string
+    required: [text]
+
+  agent:
+    title: Agent job
+    description: >-
+      Dispatches a real job to the home worker over the tailnet and streams its
+      status inline (queued -> running -> done, plus the queue-full and
+      server-offline signals). The job config (agent, inputs, timeout) lives under
+      the slide's `t_agent` frontmatter and is referenced here by `id` — mirroring
+      the `choice` widget, so bulky config stays in frontmatter (small diffs)
+      while the shortcode controls only placement.
+    type: object
+    properties:
+      id:
+        title: Agent id
+        description: Must match an `id` under the slide's `t_agent` frontmatter.
+        type: string
+    required: [id]
+
+  agentdef:
+    title: Agent definition text
+    description: >-
+      Renders, inline, one field of a config-driven agent's CHOSEN profile — e.g.
+      the system prompt of the controller variant the group picked.
+      `id` names a `t_agent` job on the slide (which must carry a `profiles` map);
+      `field` selects the profile field (default `system`). The active profile
+      follows the group's live choice, so the shown text switches when the group
+      changes variant. Renders a hint until the choice is made.
+    type: object
+    properties:
+      id:
+        title: Agent id
+        description: Must match an `id` under the slide's `t_agent` frontmatter.
+        type: string
+      field:
+        title: Profile field
+        description: Which profile field to show; defaults to `system`.
+        type: string
+    required: [id]
+
+  serverstatus:
+    title: Agent server status
+    description: >-
+      Read-only panel: shows whether the home agent server is alive (health,
+      uptime, queue depth, which agents are present) and the student's current
+      group tag, so they can find their own jobs in any queue list. Dispatches
+      nothing — it reads nabu's cached /healthz probe and the student's session.
+    type: object
+    properties:
+      show:
+        title: Panels to show
+        description: Comma-separated panels; default shows all three.
+        type: string
+        default: "health,agents,group"
+    required: []
+
+  uploader:
+    title: Student uploader
+    description: >-
+      A focused hand-in control: lets a student upload a file (or import a URL) to
+      their own work — or their group's shared work — for this lesson, and lists
+      what they've uploaded so far with a delete action. A simpler alternative to
+      the full `browser` widget when a slide just asks the student to submit
+      something. Reads/writes only the session-keyed student routes, so a student
+      never touches course-only endpoints; inert for signed-out guests and staff.
+    type: object
+    properties:
+      scope:
+        title: Where the upload lands
+        description: The student's own work, or their group's shared work.
+        type: string
+        enum: [student, group]
+        default: student
+      accept:
+        title: Accepted file types
+        description: >-
+          Optional file-input filter hint, e.g. ".mp4" or "video/*". Advisory
+          only — it does not enforce the type server-side.
+        type: string
+        default: ""
+      label:
+        title: Label
+        description: Optional heading shown above the uploader.
+        type: string
+        default: ""
+    required: []
+
+  browser:
+    title: Resource browser
+    description: >-
+      Tabbed file browser over the lesson's resource store. Each tab is a scope:
+      `resources` (course files, read-only for students), `group` (the student's
+      group work), `student` (the student's own work). Students can upload to
+      their group/own tabs; teachers see and manage every scope. Reads the fast
+      PocketBase index, not the bucket directly.
+    type: object
+    properties:
+      tabs:
+        title: Tabs to show
+        description: >-
+          Space-separated scopes to show as tabs, in order. Any of resources,
+          group, student.
+        type: string
+        default: "resources"
+      variant:
+        title: Variant
+        description: >-
+          `full` (default) is the managed tabbed browser. `list` is a compact,
+          read-only two-column list (size + name link) of the COURSE-GLOBAL
+          resources folder (bucket-root `resources/`: school logo, clips, …),
+          sorted by name — for embedding, e.g. inside a post-it.
+        type: string
+        enum: [full, list]
+        default: full
+      size:
+        title: Show size column
+        description: >-
+          Whether to show the size column (column 1). Set `false` to drop it — the
+          narrow-screen escape hatch for both variants.
+        type: string
+        enum: [true, false]
+        default: true
+    required: []
+
+  # ── Presentational widgets ──────────────────────────────────────────────────
+  # Structure an author reaches for repeatedly. These render to plain HTML at
+  # seed time and are styled entirely from the course stylesheet — no Svelte
+  # component, no client hydration (see contentwidgets.go).
+  #
+  # They share a TONE vocabulary instead of taking colours: define | ok | warn |
+  # info | attention | step | neutral. An author writes what a box MEANS and the
+  # course stylesheet (_course.css) decides how it looks, so re-theming a course
+  # is a palette edit rather than a find-and-replace across every slide.
+  #
+  # Paired containers wrap the Markdown after them, up to a matching
+  # `{{< /LMS >}}`. Leave blank lines around the wrapped content so it renders as
+  # Markdown rather than literal text.
+
+  define:
+    title: Definition box (paired container)
+    description: >-
+      A tinted box for a definition, key idea or worked example — the workhorse
+      container. `header` is an optional title; `tone` picks its meaning (and so
+      its colour).
+    type: object
+    properties:
+      tone:
+        title: Tone
+        description: What this box means; the course stylesheet maps it to a colour.
+        type: string
+        enum: [define, ok, warn, info, attention, step, neutral]
+        default: define
+      header:
+        title: Header
+        description: Optional title shown at the top of the box.
+        type: string
+    required: []
+
+  steps:
+    title: Numbered procedure (paired container)
+    description: >-
+      Wraps a sequence of `step` containers and numbers them. Numbering is done
+      in CSS, so inserting a step in the middle renumbers the rest with no
+      authoring change. Set `start` to continue a procedure across slides.
+    type: object
+    properties:
+      start:
+        title: First number
+        description: The number to give the first step. Defaults to 1.
+        type: string
+        pattern: "^[0-9]+$"
+        default: "1"
+    required: []
+
+  step:
+    title: One step (paired container)
+    description: >-
+      One numbered card inside a `steps` container. `title` is the step's
+      heading; the wrapped Markdown is the instruction. The number is supplied by
+      the parent, not authored.
+    type: object
+    properties:
+      title:
+        title: Title
+        description: Optional heading for this step.
+        type: string
+      tone:
+        title: Tone
+        description: What this step means; defaults to the neutral step colour.
+        type: string
+        enum: [define, ok, warn, info, attention, step, neutral]
+        default: step
+    required: []
+
+  grid:
+    title: Responsive grid (paired container)
+    description: >-
+      Lays out `col` children side by side, wrapping to fewer columns as the
+      screen narrows — so the same markup reads on a phone with no authored
+      breakpoint. `cols` is the preferred column count; `min` is the width below
+      which a column wraps.
+    type: object
+    properties:
+      cols:
+        title: Columns
+        description: Preferred number of columns (1-6). Defaults to 2.
+        type: string
+        pattern: "^[1-6]$"
+        default: "2"
+      min:
+        title: Minimum column width
+        description: A CSS length such as 18rem, 240px or 30%. Defaults to 18rem.
+        type: string
+        pattern: "^[0-9]+(\\.[0-9]+)?(rem|em|px|ch|%)$"
+        default: 18rem
+    required: []
+
+  proscons:
+    title: Pros and cons (paired container)
+    description: >-
+      A two-column comparison. Put two `col` containers inside it, conventionally
+      `tone="ok"` for the pros and `tone="attention"` for the cons, each with its
+      own `title`. A preset over `grid`, so both share one set of column rules.
+    type: object
+    properties: {}
+    required: []
+
+  col:
+    title: Grid column (paired container)
+    description: >-
+      One titled cell of a `grid` or `proscons`. The wrapped Markdown is the
+      cell's content.
+    type: object
+    properties:
+      title:
+        title: Title
+        description: Optional heading for this column.
+        type: string
+      tone:
+        title: Tone
+        description: What this column means; the course stylesheet maps it to a colour.
+        type: string
+        enum: [define, ok, warn, info, attention, step, neutral]
+    required: []
+
+  vocab:
+    title: Glossary entry (paired container)
+    description: >-
+      One term in a glossary: `term` and its optional part of speech (`pos`), the
+      wrapped Markdown as the definition, and an optional worked `example`.
+    type: object
+    properties:
+      term:
+        title: Term
+        description: The word or phrase being defined.
+        type: string
+      pos:
+        title: Part of speech
+        description: e.g. Noun, Verb, "Verb / Noun".
+        type: string
+      example:
+        title: Example
+        description: An optional sentence showing the term in use.
+        type: string
+    required: [term]
+
+  toolcard:
+    title: Tool card (paired container)
+    description: >-
+      One entry in a directory of tools. `name` and optional `url` form the
+      heading, `cost` is a short badge (e.g. "Free tier"), `focus` a one-line
+      summary, and the wrapped Markdown the description. Only http(s) URLs are
+      linked.
+    type: object
+    properties:
+      name:
+        title: Tool name
+        description: The tool's name, shown as the heading.
+        type: string
+      url:
+        title: Link
+        description: The tool's home page (http/https only).
+        type: string
+      cost:
+        title: Cost
+        description: Short pricing badge, e.g. "Free" or "Free tier".
+        type: string
+      focus:
+        title: Focus
+        description: One line on what the tool is for.
+        type: string
+    required: [name]
+
+  banner:
+    title: Section banner
+    description: >-
+      A full-width divider labelling a new section of a long slide deck. Its
+      gradient runs between two tones. Self-closing — the label is a param, not
+      wrapped content.
+    type: object
+    properties:
+      text:
+        title: Label
+        description: The banner text.
+        type: string
+      from:
+        title: Gradient start
+        description: Tone the gradient starts from.
+        type: string
+        enum: [define, ok, warn, info, attention, step, neutral]
+        default: attention
+      to:
+        title: Gradient end
+        description: Tone the gradient ends at.
+        type: string
+        enum: [define, ok, warn, info, attention, step, neutral]
+        default: info
+    required: [text]
+
+  itemtype:
+    title: Item type badge
+    description: >-
+      A small inline badge naming what a slide is. Replaces the banner images an
+      LMS export usually carries — the same information as themeable text at a
+      fraction of the bytes.
+    type: object
+    properties:
+      kind:
+        title: Kind
+        description: What this slide is.
+        type: string
+        enum: [assignment, discussion, quiz, page]
+    required: [kind]
+
+  video:
+    title: Video embed
+    description: >-
+      A responsive, lazily-loaded YouTube or Vimeo embed. `src` accepts a watch,
+      share or embed URL, or a bare video id. The embed URL is REBUILT from the
+      extracted id rather than passed through, and YouTube is served from
+      youtube-nocookie.com, so a lesson cannot embed arbitrary third-party frames
+      or set tracking cookies on students. An unrecognised src renders nothing.
+    type: object
+    properties:
+      src:
+        title: Video
+        description: A YouTube/Vimeo URL or bare video id.
+        type: string
+      title:
+        title: Title
+        description: Accessible title for the embedded player.
+        type: string
+        default: Video
+      ratio:
+        title: Aspect ratio
+        description: e.g. 16:9 (default) or 4:3.
+        type: string
+        pattern: "^[0-9]{1,2}:[0-9]{1,2}$"
+        default: "16:9"
+    required: [src]
+
+  quiz:
+    title: Self-check quiz
+    description: >-
+      Renders a named set of self-check questions at this point in the slide body.
+      The questions live under the slide's `t_quiz` frontmatter and are referenced
+      here by `id` — the same pattern as `choice`, keeping bulky config in
+      frontmatter (small, readable diffs) while the shortcode controls placement.
+
+      Today a quiz is formative only: a student answers, sees whether they were
+      right and reads the rationale, and nothing is stored or scored. The authored
+      ids are deliberately stable so a future persistence layer can key answers on
+      (session, student-or-group, quiz id, question id) without any lesson being
+      re-authored. See docs/quiz-persistence.md.
+    type: object
+    properties:
+      id:
+        title: Quiz id
+        description: Must match an `id` under the slide's `t_quiz` frontmatter.
+        type: string
+    required: [id]

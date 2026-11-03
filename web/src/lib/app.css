@@ -1,0 +1,63 @@
+/* App-wide tweaks on top of PicnicCSS & nabu.css */
+
+/* Typography: Raleway headings, KoHo Light body, Ubuntu Mono code. */
+:root {
+	--nabu-font-heading: 'Raleway', system-ui, -apple-system, 'Segoe UI', Roboto,
+		Helvetica, Arial, sans-serif;
+	--nabu-font-body: 'KoHo', system-ui, -apple-system, 'Segoe UI', Roboto,
+		Helvetica, Arial, sans-serif;
+	--nabu-font-mono: 'Ubuntu Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+		'Liberation Mono', monospace;
+}
+
+body {
+	background: var(--pi-body-bg);
+	font-family: var(--nabu-font-body);
+	font-weight: 300;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--nabu-font-heading);
+}
+
+code,
+pre,
+kbd,
+samp {
+	font-family: var(--nabu-font-mono);
+}
+
+.card {
+	background: var(--pi-body-bg);
+	border-radius: 8px;
+	padding: 1.2rem 1.4rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+	margin-bottom: 1rem;
+}
+
+.muted {
+	color: var(--pi-meta);
+	font-size: 0.9rem;
+}
+
+.row {
+	display: flex;
+	gap: 0.8rem;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.spacer {
+	flex: 1;
+}
+
+/* PicnicCSS uses accent for primary buttons via .button; keep it on-brand. */
+.button,
+button {
+	background: var(--hi2);
+}

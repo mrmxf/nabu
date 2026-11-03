@@ -1,0 +1,240 @@
+/* ≡≡≡ NABU ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+  
+  NABU: A Learning Management System inspired by Mesopotamian scholarship, designed for the modern web.
+
+  This CSS drives the online rendering of the pages. When the pages are rendered externally, this file may be
+  overridden by a custom stylesheet such as the mrmxf PIHUW theme for HUGO.
+
+  The default theme is a light theme, with a dark mode toggle.
+  The palette is inspired by Mesopotamian pigments and the scribal tradition.
+*/
+
+/* ≡≡≡ INDEX ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+  1. Colours & Fonts — raw palette, derived hi/bg/pad tokens, typography vars, breakpoints                        
+  2. Dark mode       — system / forced-light / forced-dark tri-state   ⚠ see THEME-REVIEW (dark mode broken; start there)
+  3. Base HTML       — body, h1-h6, code, hr, th  (colour tokens only, no layout)                                 
+  4. PicnicCSS       — .card, .button, .label, .breadcrumb tweaks                                                 
+  5. Navigation      — .pi-nav, .pi-menu-*, .dropdown, .logo-*, #siteTitleMenu                                    
+  6. Page layout     — block columns, .src.block, .txt.block, .page-title, .breadcrumb                            
+  7. Components      — .banner, .footer, sidebar, .childbar, .definition-block, .accordion / .tab                 
+  8. Taxonomies      — .pi-tax-*, .pi-flex-*, .label-blog, .meta                                                  
+  9. Media           — .image, section img, main footer.caption                                                   
+ 10. Graph           — .hw-graph, .hw-graph-error                                                                 
+ 11. Animations      — @keyframes bounce, hue-rotate; .view-s/m/w responsive classes                              
+/* ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡
+*/
+
+/*  _______         _                                            ___                                                 */
+/* (_______)       | |                                 _        / __)                 _                              */
+/*  _         ___  | |   ___   _   _   ____   ___    _| |_    _| |__   ___   ____   _| |_   ___                      */
+/* | |       / _ \ | |  / _ \ | | | | / ___) /___)  (_   _)  (_   __) / _ \ |  _ \ (_   _) /___)                     */
+/* | |_____ | |_| || | | |_| || |_| || |    |___ |    |_|      | |   | |_| || | | |  | |_ |___ |                     */
+/*  \______) \___/  \_) \___/ |____/ |_|    (___/              |_|    \___/ |_| |_|   \__)(___/                      */
+/* ≡≡≡  1. Colours & Fonts  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+
+/* Mesopotamian Pigment Palette (CSS Variables) */
+
+:root {
+  /* ── 1a  User palette ───────────────────────────────────────────────────────────────────────────────────────────
+    Substitute these values to customise the site. Almost verything else is derived from the palette.
+    Use the oklch() function to define colours in a perceptually uniform space.
+
+    MESOPOTAMIAN PIGMENT CORE: ARCHAEOLOGICAL PROVENANCE
+    Synthesized from spectrophotometric analysis of mineralogical terminology 
+    and archaeological strata. These tokens represent the transition from 
+    utilitarian riverine tools to the divine mediums of the scribal elite.
+  */
+  --meso-cochineal-red: oklch(42% 0.14 26.25);      /* Organic, aged crimson dye */
+  --meso-lapis-lazuli-blue: oklch(35% 0.18 265.1);  /* High-status silicate-based ultramarine */
+  --meso-yellow-ochre: oklch(76.42% 0.115 84.6);    /* Earthy ferric-oxide clay base */
+  --meso-malachite-green: oklch(61% 0.11 162.4);    /* Muted copper-carbonate mineral tone */
+  --meso-river-reed: oklch(82% 0.07 82);            /* Dried Phragmites australis organic fiber */
+  --meso-baked-brick: oklch(64% 0.10 48);           /* Oxidized, kiln-fired ceramic strata */
+
+  /* 
+    SEMANTIC SCRIBAL ALIASES: THEOLOGICAL COSMOLOGY
+    Mapping the material core to the metaphysical structures of the cuneiform 
+    tradition, referencing the patron of literacy, Nabu, and his predecessor 
+    Nisaba, goddess of vegetation and accounts.
+    These are used in the nabu svg logo
+  */
+  --nabu-primary: var(--meso-lapis-lazuli-blue);
+  --edubba-surface: oklch(95% 0.02 85); /* Lighter interior 'House of Tablets' surface */
+  --nisaba-accent: var(--meso-malachite-green);
+  --fate-marker: var(--meso-cochineal-red); /* The 'dup šīmāti' (Tablet of Destinies) dye */
+
+  /*
+    PERSONA HIGHLIGHTS: documentation audiences (student | teacher | admin).
+    Each brightens a distinct pigment via relative-color oklch, so the three read
+    as one family yet stay distinguishable. Used by PersonaBadge + the help filter.
+  */
+  --nabu-hi-student: oklch(from var(--nisaba-accent) l calc(c * 1.15) h); /* malachite */
+  --nabu-hi-teacher: oklch(from var(--nabu-primary) l calc(c * 1.25) h);  /* lapis */
+  --nabu-hi-admin: oklch(from var(--fate-marker) l calc(c * 1.15) h);     /* cochineal */
+
+  /* 
+    FUNCTIONAL UI VARIABLES: IRAQI MODERNISM
+    Interface tokens inspired by the architectural and artistic 'Renewing of 
+    Islamic Tradition' led by Jewad Selim and Mohamed Makiya, integrating 
+    ancient heritage into mid-20th-century modernist concepts.
+  */
+  --ink-cuneiform: oklch(22.1% 0.084 265.1);    /* High-contrast text mirroring deep lapis ink */
+  --tablet-background: oklch(92% 0.035 86);     /* Raw, unbaked river valley clay surface */
+  --tablet-fired: var(--meso-baked-brick); /* Inspired by Nebuchadnezzar II's Ezida Bricks */
+  --stylus-border: var(--meso-river-reed); /* Organic divider based on the split river reed */
+
+  /* Default (light) theme; @media dark and [data-theme] blocks override. */
+  color-scheme: light;
+
+  /* Core tokens used for text and knowing what is dark vs what is light */
+  --pi-dark:   oklch(5% none none);
+  --pi-light:  oklch(95% none none);
+  
+  /* ── 1b  Derived core tokens ──────────────────────────────────────────────────────────────────────────────────────
+  The naming of these variables is important - they ensure backwards compatibility with the PIHUW theme, and ensure
+  local renderings and HUGO renderings will match.
+  */
+  /* Computed from the palette above. Follow this pattern in your site.css Do not hardcode hex/hsl values.        */
+  --pi-body:    var(--pi-dark);
+  --pi-body-bg: oklch(95% 0.02 85);    /* wheat-white page background */
+  --pi-bg:      oklch(100% 0.02 85);   /* component surface (white) */
+  
+  --hi1: var(--meso-cochineal-red);
+  --hi2: var(--meso-lapis-lazuli-blue);
+  --hi3: var(--meso-yellow-ochre);
+  --hi4: var(--meso-malachite-green);
+
+  /* Tinted surfaces: keep each highlight's hue + chroma, lift lightness to 95%.
+     Relative oklch channel order is L C H (see --pi-code below for the pattern). */
+  --bg1: oklch(from var(--hi1) 95% c h);
+  --bg2: oklch(from var(--hi2) 95% c h);
+  --bg3: oklch(from var(--hi3) 95% c h);
+  --bg4: oklch(from var(--hi4) 95% c h);
+
+  --pi-meta:       oklch(from var(--pi-dark) 60% c h);
+  --pi-code:       oklch(from var(--meso-lapis-lazuli-blue) 50% c h); /* lighten the theme blue */
+  --pi-link:       oklch(from var(--hi4) calc(l - 20%) c h);  /* hi4 dimmed for light bg */
+
+}
+
+
+
+/*                                                                                                                   */
+/*   ____             _                          _                                                                   */
+/*  |  _ \  __ _  _ _| | __   _ __ ___   ___   __| | ___                                                             */
+/*  | | | |/ _` || '_| |/ /  | '_ ` _ \ / _ \ / _` |/ _ \                                                            */
+/*  | |_| | (_| || |  |   <  | | | | | | (_) | (_| |  __/                                                            */
+/*  |____/ \__,_||_|  |_|\_\ |_| |_| |_|\___/ \__,_|\___|                                                            */
+/*                                                                                                                   */
+/* ≡≡≡  2. Dark mode  ≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡≡ */
+/* Tri-state: "system" follows OS preference, "light"/"dark" user-forced via data-theme attribute on <html>.       */
+/* theme-toggle.js writes data-theme; theme-init.js restores it from localStorage on page load.                     */
+/* WHY THE DARK VALUES APPEAR TWICE (and why that is not a bug):                                                     */
+/* CSS cannot share a ruleset between a @media block and an attribute selector — there is no equivalent             */
+/* of a SCSS mixin or @apply in plain CSS. The two blocks below are therefore intentionally identical.               */
+/*   @media (prefers-color-scheme: dark)  — "system" mode: OS is dark, no data-theme attribute set.                 */
+/*   [data-theme="dark"]                  — user-forced dark: attribute present, OS preference irrelevant.           */
+/* Attribute selectors beat media queries in specificity, so [data-theme="light"] can override the @media           */
+/* block even when the OS is dark — that is what makes forced-light work correctly.                                  */
+/* The @media block must fire before JS runs to prevent a flash of wrong theme (FOUC), so it cannot depend           */
+/* on JS-written attributes. Edit both blocks together whenever dark palette values change.                          */
+
+/* ╔═ THEME-REVIEW ═ dark mode does NOT work yet. Future-you: start here. ═════════════════════════════════════════════
+   (full write-up: docs/nabu-css-dark-mode-review.md — this is the terse version.)
+   FIXED:
+     #1  ✓ oklch() in both dark blocks rewritten to space-separated  L C H  (e.g. oklch(87% 0 0)) — dark now applies.
+     #2  ✓ --bg1..4 (+ --pi-meta/--pi-link) in the light section rewritten to oklch(from var(--hiN) 95% c h).
+     #3  ✓ color-scheme added to :root + each theme block (native inputs/scrollbars/canvas follow the theme).
+   REMAINING (semantic refactors, not blocking dark mode):
+     #4  Add a semantic layer  --pi-primary/-error/-warn/-ok = --hi2/--hi1/--hi3/--hi4  so meaning is centralised,
+         not pigment-luck. Components already assume: hi1=error, hi2=primary, hi3=warning, hi4=success.
+     #5  #fff on --hi2 inverts in dark (hi2 brightens) → add an adaptive --pi-on-primary for text on colour.
+     #6  No dark override for --stylus-border / --nisaba-accent / --nabu-primary / --fate-marker → persona
+         colours + borders won't shift for dark. (--ink-cuneiform staying dark IS intended: nav + dark chips.)
+   NB  Components are fully token-driven and light mode works — #4-#6 refine dark, they don't gate it.
+       --pi-hi* is retired; components use --hi1..4 / --bg1..4 / --pi-* only.
+   ╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── system — dark values when OS is dark and the user has not forced a theme ─────────────────────────────────────
+  these values were hand tuned to be visually pleasing on a dark background, and are aligned with but not derived from
+  the light palette
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --pi-dark:    oklch(87% 0 0);
+    --pi-light:   oklch(12% 0 0);
+
+    --pi-body-bg:   oklch(8% 0 0);    /* near-black page background */
+    --pi-bg:        oklch(15% 0 0);   /* dark grey component surface */
+
+    /* hi* raised in lightness so they pop against a ~10% background. L C H order. */
+    --hi1:   oklch(68% 55% 46);    /* warm gold   — was 52% */
+    --hi2:   oklch(68% 50% 324);   /* bright pink — was 42% */
+    --hi3:   oklch(64% 45% 80);    /* lime green  — was 49% */
+    --hi4:   oklch(68% 50% 243);   /* periwinkle  — was 39% */
+
+    /* bg* switched to dark tinted surfaces — the light-mode oklch(from hi 95% c h) formula stays near-white */
+    --bg1:   oklch(14% 25% 46);    /* dark amber */
+    --bg2:   oklch(14% 20% 324);   /* dark mauve */
+    --bg3:   oklch(13% 20% 80);    /* dark olive */
+    --bg4:   oklch(15% 20% 243);   /* dark indigo */
+
+    /* pi-meta — slightly brighter than the formula gives on a dark bg */
+    --pi-meta:   oklch(65% 0 0);
+    --pi-link:   oklch(from var(--hi4) calc(l + 20%) c h);  /* hi4 brightened for dark bg */
+  }
+  /* banner and taxonomy label backgrounds use inline   oklch(95%) — must override via class */
+  .banner         { background-color: var(--bg3); }
+  .pi-tax-1.label { background: var(--bg3); }
+  .pi-tax-2.label { background: var(--bg2); }
+  .pi-tax-3.label { background: var(--bg1); }
+  .pi-tax-4.label { background: var(--bg4); }
+}
+
+/* ── forced light — attribute selector wins over the @media block above ──────────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+  --pi-dark:    oklch(20% 0 0);
+  --pi-light:   oklch(93% 0 0);
+
+  --pi-body-bg:   oklch(95% 0.02 85);   /* wheat-white page background */
+  --pi-bg:        oklch(100% 0 0);      /* component surface (white) */
+  --pi-link:      oklch(from var(--hi4) calc(l - 20%) c h);  /* hi4 dimmed for light bg */
+}
+
+/* ── forced dark — identical values to the @media block above; duplicated because CSS cannot share between          */
+/*    a @media query and an attribute selector. Edit both blocks together if dark palette values change. ─────────── */
+/* ⚠ THEME-REVIEW #1: same invalid oklch() as the @media block — fix here too. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --pi-dark:    oklch(87% 0 0);
+  --pi-light:   oklch(12% 0 0);
+
+  --pi-body-bg:   oklch(8% 0 0);    /* near-black page background */
+  --pi-bg:        oklch(15% 0 0);   /* dark grey component surface */
+
+  /* hi* raised in lightness so they pop against a ~10% background. L C H order. */
+  --hi1:   oklch(68% 55% 46);    /* warm gold   — was 52% */
+  --hi2:   oklch(68% 50% 324);   /* bright pink — was 42% */
+  --hi3:   oklch(64% 45% 80);    /* lime green  — was 49% */
+  --hi4:   oklch(68% 50% 243);   /* periwinkle  — was 39% */
+
+  /* bg* switched to dark tinted surfaces — the light-mode oklch(from hi 95% c h) formula stays near-white */
+  --bg1:   oklch(14% 25% 46);    /* dark amber */
+  --bg2:   oklch(14% 20% 324);   /* dark mauve */
+  --bg3:   oklch(13% 20% 80);    /* dark olive */
+  --bg4:   oklch(15% 20% 243);   /* dark indigo */
+
+  /* pi-meta — slightly brighter than the formula gives on a dark bg */
+  --pi-meta:   oklch(65% 0 0);
+  --pi-link:   oklch(from var(--hi4) calc(l + 20%) c h);  /* hi4 brightened for dark bg */
+}
+
+/* banner and taxonomy label backgrounds use inline   oklch(95%) — must override via class */
+[data-theme="dark"] .banner         { background-color: var(--bg3); }
+[data-theme="dark"] .pi-tax-1.label { background: var(--bg3); }
+[data-theme="dark"] .pi-tax-2.label { background: var(--bg2); }
+[data-theme="dark"] .pi-tax-3.label { background: var(--bg1); }
+[data-theme="dark"] .pi-tax-4.label { background: var(--bg4); }
+
