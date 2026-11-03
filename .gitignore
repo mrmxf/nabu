@@ -8,7 +8,8 @@ bin/
 nabu-deploy
 *.exe
 
-# Node / SvelteKit
+# Node / SvelteKit (the built app goes to webapp/dist, embedded by -tags webembed)
+webapp/dist/
 node_modules/
 web/.svelte-kit/
 web/build/
@@ -16,3 +17,5 @@ runtime/dist/
 
 # WSL artifacts
 *:Zone.Identifier
+_clog_build/
+_clog_deploy/

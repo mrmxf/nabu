@@ -8,6 +8,8 @@ params:
   summary: |
     The Mesopotamian scribe-god behind the name, and the symbolism in the logo.
 ---
+![Nabu, the divine scribe of wisdom: his stylus, clay tablet and the mushussu dragon](who-is-nabu.jpg)
+
 ## Logo Symbolism
 
 **The Frame** (The Clay Tablet): The geometrical rounded square perfectly mimics a modern mobile app icon while serving as a simplistic rendition of a clay tablet. In ancient Mesopotamia, schools were called edubba or "House of Tablets"

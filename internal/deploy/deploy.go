@@ -46,7 +46,7 @@ import (
 )
 
 // Deploy-build constants: `snapshot` rebuilds the `deploy`-tagged binary so
-// go:embed bakes in the freshly packed archive, and names it deployBin.
+// the go:embed directive bakes in the freshly packed archive, and names it deployBin.
 const (
 	deployBuildTag = "deploy"
 	deployBin      = "nabu-deploy"
@@ -230,13 +230,13 @@ func moveToTmp(src, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.Create(dst)
 	if err != nil {
 		return "", err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
+		_ = out.Close() // the copy error is the one to report
 		return "", err
 	}
 	if err := out.Close(); err != nil {
@@ -314,7 +314,7 @@ func checkpointWAL(dataDir string) {
 		if err != nil {
 			return err
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 		if _, err := db.Exec("PRAGMA busy_timeout=5000"); err != nil {
 			return err
 		}
@@ -348,7 +348,7 @@ func pack(targets map[string]string, outPath string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	gw := gzip.NewWriter(f)
 	tw := tar.NewWriter(gw)
@@ -415,7 +415,7 @@ func packTree(tw *tar.Writer, root, prefix string) (int, error) {
 		if err != nil {
 			return err
 		}
-		defer in.Close()
+		defer func() { _ = in.Close() }()
 		if _, err := io.Copy(tw, in); err != nil {
 			return err
 		}
@@ -434,7 +434,7 @@ func extract(blob []byte, targets map[string]string, force bool) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("read blob: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 	tr := tar.NewReader(gr)
 
 	// decision caches, per top-level prefix, the resolved target dir to write
@@ -492,7 +492,7 @@ func extract(blob []byte, targets map[string]string, force bool) (int, error) {
 			return count, err
 		}
 		if _, err := io.Copy(out, tr); err != nil {
-			out.Close()
+			_ = out.Close() // the copy error is the one to report
 			return count, err
 		}
 		if err := out.Close(); err != nil {

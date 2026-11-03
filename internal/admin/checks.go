@@ -247,7 +247,7 @@ func checkEnv(v *validator, cfg *embedfs.Config, n needs) {
 	}
 
 	// Worker — only a warning: agents degrade to an offline sample without it.
-	if n.agents && !(envSet("WORKER_HEALTH_URL") || envSet("WORKER_DISPATCH_URL")) {
+	if n.agents && !envSet("WORKER_HEALTH_URL") && !envSet("WORKER_DISPATCH_URL") {
 		v.record(sevWarn, "worker not configured", "vars", "WORKER_HEALTH_URL/WORKER_DISPATCH_URL",
 			"detail", "content uses agents; they will show offline until a worker is set")
 	}

@@ -266,7 +266,7 @@ func (p *Prober) Dispatch(ctx context.Context, req DispatchRequest) (DispatchRes
 	if err != nil {
 		return DispatchResult{}, fmt.Errorf("dispatch to worker: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return DispatchResult{}, fmt.Errorf("worker returned %d", resp.StatusCode)
 	}
@@ -322,7 +322,7 @@ func (p *Prober) probe(ctx context.Context) Health {
 		slog.Warn("agent worker unreachable", "url", p.url, "err", err)
 		return Health{Alive: false, Reason: "worker unreachable", CheckedAt: now}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return Health{Alive: false, Reason: fmt.Sprintf("worker returned %d", resp.StatusCode), CheckedAt: now}
 	}

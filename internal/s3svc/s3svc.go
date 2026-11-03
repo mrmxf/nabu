@@ -173,7 +173,7 @@ func (s *Service) PutFromURL(ctx context.Context, bucket, key, srcURL string) (s
 		}
 		return "", 0, "", fmt.Errorf("fetch source: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", 0, "", fmt.Errorf("source returned %d", resp.StatusCode)
 	}

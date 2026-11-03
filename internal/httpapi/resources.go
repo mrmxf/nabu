@@ -250,7 +250,7 @@ func resourceListHandler(e *core.RequestEvent) error {
 	}
 	// Staff may browse any scope: course resources (default), a group's shared work
 	// (optionally filtered to one ?group= tag), or a student's own work (?owner=).
-	scope := lmsfs.ScopeResources
+	var scope lmsfs.Scope
 	switch q.Get("scope") {
 	case "", "resources":
 		scope = lmsfs.ScopeResources

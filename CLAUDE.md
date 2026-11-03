@@ -37,7 +37,8 @@ migrations/        Go schema migrations; append-only
 embedfs/           embedded nabu-config.yaml + typed kfg loader (course.*, pocketbase.*)
 help/              Nabu's own help: a course, //go:embed'ed into the binary
 content/           the bundled sample course
-web/               SvelteKit SPA; builds to ../pb_public
+web/               SvelteKit SPA; builds to ../webapp/dist
+webapp/            embeds webapp/dist into the binary with -tags webembed (release builds)
 runtime/           TypeScript agent runtime (@mrmxf/nabu-runtime); courses add agents
 docs/              engine docs; docs/user/ is operator-facing
 scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh
@@ -88,6 +89,12 @@ scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh
   or `embed://<tree>/…` for a tree baked into the binary.
 - `embed://` is a LABEL, never a path to open. Do not invent `/embed/…` paths: they read
   like real directories and can collide with one.
+
+### Build and release
+- `clog build` is the gate CI runs: guards, lint (0 issues), test, trivy scan. Keep it green.
+- Release = push a `vX.Y.Z` tag. Never commit the built web app (`webapp/dist` is ignored).
+- go:embed'ed trees (`help/`, `internal/`) are exempt from LFS in `.gitattributes`: the Go
+  module proxy does not resolve LFS, so a library build would embed pointer files.
 
 ### Static content and media
 - `nabu build` output and media share the `/content/` URL prefix: `/content/index.json`,

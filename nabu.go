@@ -50,6 +50,7 @@ import (
 	"github.com/mrmxf/nabu/internal/seed"
 	"github.com/mrmxf/nabu/internal/serverctl"
 	"github.com/mrmxf/nabu/internal/students"
+	"github.com/mrmxf/nabu/webapp"
 
 	// register schema migrations for side effects
 	_ "github.com/mrmxf/nabu/migrations"
@@ -85,9 +86,11 @@ type Options struct {
 	// config names no course.demo_roster file.
 	DemoRoster []byte
 
-	// Public is the built single-page app to serve. Nil serves the pb_public
-	// folder beside the data dir, as the plain binary does. The SPA is a build
-	// output (web/, `npm run build`), not part of the Go module.
+	// Public is the built single-page app to serve. Nil uses the copy embedded
+	// with -tags webembed (release binaries), else the pb_public folder beside
+	// the data dir. The SPA is a build output (web/, `npm run build`), not part of
+	// the Go module: a library course gets it from the release asset
+	// nabu-web-vX.Y.Z.tar.gz (`nabu web fetch`, planned).
 	Public fs.FS
 
 	// DataDir overrides DefaultDataDir. The --dir flag still wins.
@@ -163,7 +166,7 @@ func New(opts Options) *App {
 
 	sources := seed.Sources{Content: opts.Content, Assets: opts.Assets, Help: opts.Help}
 	pb.RootCmd.AddCommand(seed.NewCommand(pb, sources))
-	pb.RootCmd.AddCommand(seed.NewBuildCommand(sources, opts.Public))
+	pb.RootCmd.AddCommand(seed.NewBuildCommand(sources, app.webApp()))
 	pb.RootCmd.AddCommand(scaffold.NewCommand())
 	pb.RootCmd.AddCommand(serverctl.NewStopCommand(pb))
 	pb.RootCmd.AddCommand(students.NewCommand(pb))
@@ -192,6 +195,15 @@ func New(opts Options) *App {
 	return app
 }
 
+// webApp is the built web app to serve: Options.Public, else the copy embedded
+// with -tags webembed (package webapp), else nil (pb_public/ on disk only).
+func (a *App) webApp() fs.FS {
+	if a.opts.Public != nil {
+		return a.opts.Public
+	}
+	return webapp.FS
+}
+
 // onServe wires Nabu's routes and background work when `serve` starts, then
 // serves the SPA as the catch-all "/{path...}". A caller's own OnServe handler
 // (bound after New) runs when this one calls se.Next(); the router matches the
@@ -210,10 +222,10 @@ func (a *App) onServe(se *core.ServeEvent) error {
 	// keep the resource index synced from the live buckets in the background.
 	httpapi.StartResourceSync(se.App)
 
-	public := a.opts.Public
-	if public == nil {
-		public = os.DirFS(filepath.Join(filepath.Dir(a.DataDir()), "pb_public"))
-	}
+	// the web app (Options.Public, else the one embedded with -tags webembed)
+	// over pb_public/ on disk, which holds seeded lesson files and is the dev
+	// fallback when no app is embedded.
+	public := layeredFS{a.webApp(), os.DirFS(filepath.Join(filepath.Dir(a.DataDir()), "pb_public"))}
 	if a.mediaDir != "" {
 		a.serveMedia(se)
 	}

@@ -126,7 +126,7 @@ func applyConfigToSettings(s *core.Settings, cfg *embedfs.Config) (changes []fie
 	// so (used to avoid wiping PocketBase-required Meta fields to empty).
 	setStr := func(name string, field *string, val string, skipEmpty bool) {
 		old := *field
-		if !(skipEmpty && val == "") {
+		if !skipEmpty || val != "" {
 			*field = val
 		}
 		changes = append(changes, fieldChange{name, old, *field})

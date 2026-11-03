@@ -5,12 +5,13 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		// Build the single-page app into pb_public at the REPO ROOT (../ from
-		// web/) — the sibling of the default ./pb_data, so `serve` from the repo
-		// root finds it. fallback: index.html lets client routes (/session/:id) resolve.
+		// Build the single-page app into ../webapp/dist, which `go build -tags
+		// webembed` embeds in the binary (see webapp/). The server serves the
+		// embedded app first, then pb_public/ (seeded lesson files) from disk.
+		// fallback: index.html lets client routes (/session/:id) resolve.
 		adapter: adapter({
-			pages: '../pb_public',
-			assets: '../pb_public',
+			pages: '../webapp/dist',
+			assets: '../webapp/dist',
 			fallback: 'index.html',
 			precompress: false,
 			strict: false

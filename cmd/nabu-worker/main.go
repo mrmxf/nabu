@@ -24,6 +24,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/mrmxf/util/buildinfo"
 )
 
 // maxWorkerTTL bounds a job when nabu sends no ttl_s (0). A safety cap so the
@@ -39,8 +41,10 @@ const maxWorkerTTL = 120 * time.Second
 // non-local deployment MUST set it.
 const EnvDispatchToken = "WORKER_DISPATCH_TOKEN"
 
-// version is the worker build version reported in /healthz.
-const version = "0.1.0"
+// version is the worker build version reported in /healthz: the git-derived
+// tag stamped at build time (clog's bc-golang via -ldflags), so a deployed
+// worker says which release it is.
+var version = buildinfo.Info().Tag
 
 // agents lists the tools this worker advertises. nabu's presence test asserts
 // every agent a live lesson dispatches appears here. Static for the health slice;

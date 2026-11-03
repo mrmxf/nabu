@@ -1,0 +1,111 @@
+# clog configuration: how Nabu builds and releases itself.
+#
+# It overlays util's embedded konfig (the bc-* build workers, check groups and
+# verbs) and holds only this repo's settings. The workflows in .github/ call
+# mrmxf/clog's reusable workflows; .clog-version pins the clog they install.
+#
+#   clog build          checks, then the web app, then the Go binaries
+#   clog build --fast   the make phases only
+#   clog build prod     refuses a HEAD that is not a clean vX.Y.Z tag
+#
+# The release (a vX.Y.Z tag) publishes, with checksums.txt:
+#   nabu-<cpu>-<os>          the engine, with the web app embedded (webembed)
+#   nabu-worker-<cpu>-<os>   the stub agent worker (contract reference)
+#   nabu-web-vX.Y.Z.tar.gz   the web app alone, for library courses
+
+ci:
+  artifact: nabu-release         # build uploads it, the release job downloads it
+  title: "nabu"
+
+  stack:
+    # The web app first: make phases run in stack order, and the golang stack
+    # below embeds webapp/dist.
+    - name: web
+      type: node
+      with:
+        dir: web
+        out: webapp/dist
+        artifact: nabu-web
+    - name: nabu
+      type: golang
+      chk: [pre-build, guards, lint, test, scan]
+      with:
+        go-main: ./cmd/nabu
+        exe: nabu
+        title: Nabu
+        tags: [webembed]
+        # classroom laptops are often Windows or macOS: one download per OS
+        platforms: [linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64]
+    - name: worker
+      type: golang
+      with:
+        go-main: ./cmd/nabu-worker
+        exe: nabu-worker
+        title: Nabu stub worker
+
+  policy:
+    # Every event builds; only a vX.Y.Z tag (or a deliberate manual run)
+    # publishes. A pull request never deploys.
+    build: [branch, tag, pr, dispatch, local]
+    deploy:
+      prod:
+        tags: ["v*"]
+        dispatch: true
+
+  targets:
+    release:
+      kind: github-release
+      modes: [prod]
+      prod:
+        repo: mrmxf/nabu
+        tag: "{tag}"
+        dir: _clog_build/artifacts
+        assets: >-
+          nabu-amd-lnx nabu-arm-lnx nabu-amd-mac nabu-arm-mac nabu-amd-win.exe nabu-arm-win.exe
+          nabu-worker-amd-lnx nabu-worker-arm-lnx nabu-worker-amd-mac nabu-worker-arm-mac
+          nabu-web-{tag}.tar.gz
+
+snippets:
+  project:
+    config: |
+      export PROJECT=nabu
+      export EXE=nabu
+      export TITLE=Nabu
+
+# ─── check ───────────────────────────────────────────────────────────────────
+# Repo rules that are cheap to enforce on every build (see CLAUDE.md):
+#   - sample identities only: every email is @nabu.example, except LICENSE
+#     (a domain starting with a digit is an npm package@version, not an email)
+#   - no ko (containers are podman/docker, built by clog)
+#   - the widget catalogue and its help page agree
+check:
+  guards:
+    blocks:
+      - name: sample identities only
+        try: |
+          hits="$(git grep -nIE '[A-Za-z0-9._%+-]+@[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b' -- . ':!LICENSE' ':!web/package-lock.json' ':!runtime/package-lock.json' \
+            | grep -vE '@nabu\.example|@(sveltejs|types|langchain|mrmxf/nabu-runtime)/' || true)"
+          [ -z "$hits" ] && exit 0
+          printf '%s\n' "$hits" | head -20; exit 1
+        ok: |
+          clog Log -I "  sample identities only (@nabu.example)"
+        catch: |
+          clog Log -E "  real-looking emails above: use alice@nabu.example (only LICENSE keeps the author's)"
+          exit 1
+      - name: no ko
+        try: |
+          ! git grep -nIE '(^|[^a-z])ko build|ko\.build|KO_DOCKER_REPO|\.ko\.yaml' -- . ':!.clog.yaml' ':!CLAUDE.md' ':!claude-*.md'
+        ok: |
+          clog Log -I "  no ko"
+        catch: |
+          clog Log -E "  ko found above: containers are built with podman/docker via clog (bc-podman)"
+          exit 1
+      - name: widget docs match the catalogue
+        try: |
+          bash scripts/check-widget-docs.sh
+        ok: |
+          clog Log -I "  widget catalogue and 40-widgets.md agree"
+        catch: |
+          clog Log -E "  run scripts/check-widget-docs.sh and update help/using-nabu/authoring-lessons/40-widgets.md"
+          exit 1
+

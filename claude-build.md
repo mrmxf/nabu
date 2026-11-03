@@ -5,7 +5,9 @@ Detail for [CLAUDE.md](CLAUDE.md). Deploy is in [claude-deploy.md](claude-deploy
 ## Commands
 
 ```bash
-./scripts/build.sh                     # npm install + build web -> ./pb_public, then bin/nabu
+./scripts/build.sh                     # web -> webapp/dist, then bin/nabu with -tags webembed
+clog build                             # the CI gate: guards, lint, test, trivy scan, then make
+clog build --fast                      # make phases only (web, then Go for 6 platforms)
 go vet ./... && go test ./...          # verify: must pass
 (cd web && npm run check)              # svelte-kit sync + svelte-check; 0 errors
 (cd runtime && npx tsc --noEmit)       # agent runtime typecheck
@@ -28,6 +30,18 @@ bin/nabu migrate up | down 1           # down asks for confirmation; pipe `echo 
 `svelte-check` on its own reports stale route types after a route folder is renamed.
 Run `npm run check`, which runs `svelte-kit sync` first.
 
+## Release (clog)
+
+- `.clog.yaml` + `.clog-version` (clog v1.3.0): stacks `web` (node), `nabu` and `worker`
+  (golang), a `github-release` target, and a `guards` check group.
+- A `vX.Y.Z` tag runs `.github/workflows/build-release.yaml` (clog's reusable workflows,
+  pinned `@v1.3.0`): `clog build prod`, then a release with `nabu-<cpu>-<os>` (incl.
+  Windows), `nabu-worker-*`, `nabu-web-vX.Y.Z.tar.gz` and `checksums.txt`.
+- `guards`: identities are `@nabu.example` only (not LICENSE), no ko, widget docs match.
+  A guard's `catch:` must `exit 1`: clog fails a check only on a non-zero catch.
+- Lint (golangci-lint + staticcheck) must stay at 0 issues; CI runs it.
+- Locally, put a verified clog v1.3.0 on PATH and run with `GOWORK=off` as CI does.
+
 ## Facts
 
 - Go 1.26+, Node 22+, git-lfs. Module path `github.com/mrmxf/nabu`.
@@ -38,7 +52,9 @@ Run `npm run check`, which runs `svelte-kit sync` first.
   build on an exact tag is `prod`; anything else is `dev`.
 - `pb_data` defaults to `./pb_data` in the launch directory; `pb_public` is ALWAYS its
   sibling. `--dir` moves both.
-- The web build writes to `../pb_public` (`web/svelte.config.js`), i.e. the repo root.
+- The web build writes to `webapp/dist` (`web/svelte.config.js`), embedded by
+  `-tags webembed` (`webapp/`). The server stacks that app over `pb_public/` on disk
+  (`layeredFS`): app files from the binary, seeded `/content/…` and `/data/…` from disk.
 
 ## Config resolution
 

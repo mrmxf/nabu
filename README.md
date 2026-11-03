@@ -23,7 +23,16 @@ to build a Nabu course by building one, lives in [nabu-tutorial][tutorial].
 Both run the same release. Container and Cloudflare deployment are still being built;
 today Nabu runs as a single binary.
 
-## Prerequisites
+## Install
+
+Each release has one file per platform, with the web app inside, and `checksums.txt`:
+
+```bash
+clog Install nabu      # verified against checksums.txt (clog v1.3.0+)
+# or download nabu-<amd|arm>-<lnx|mac|win.exe> from github.com/mrmxf/nabu/releases
+```
+
+## Prerequisites (to build from source)
 
 - Go 1.26+
 - Node 22+
@@ -32,7 +41,7 @@ today Nabu runs as a single binary.
 ## Quick start
 
 ```bash
-./scripts/build.sh            # web -> ./pb_public, then ./bin/nabu
+./scripts/build.sh            # web app -> webapp/dist, then ./bin/nabu with it embedded
 ./bin/nabu seed               # the sample course + Nabu's built-in help
 ./bin/nabu serve              # http://127.0.0.1:8090
 ./bin/nabu stop               # (from another terminal) graceful stop
@@ -120,9 +129,9 @@ func main() {
 `./my-course seed` then `./my-course serve` work with no course files on disk. A
 config file given at run time (`-c`, `-C`, `./nabu.yaml`) still overrides the
 baked one. The web app is a build output, not part of the Go module: each release
-will attach it as `nabu-web-vX.Y.Z.tar.gz`, fetched with `nabu web fetch` (planned)
-and passed as `Options.Public`. Until then, put a built `pb_public/` beside the
-data dir. See the [package docs][godoc] for every option.
+attaches it as `nabu-web-vX.Y.Z.tar.gz` (listed in `checksums.txt`). Unpack it and
+pass it as `Options.Public`, or put it in `pb_public/` beside the data dir;
+`nabu web fetch` will automate this. See the [package docs][godoc] for every option.
 
 ## Agents
 
@@ -149,7 +158,8 @@ migrations/        Go schema migrations
 embedfs/           embedded default config (nabu-config.yaml)
 help/              Nabu's own help, a course embedded in the binary
 content/           the bundled sample course (welcome-to-nabu)
-web/               SvelteKit + Svelte 5 + PicnicCSS SPA (builds to ../pb_public)
+web/               SvelteKit + Svelte 5 + PicnicCSS SPA (builds to ../webapp/dist)
+webapp/            embeds the built app in the binary (-tags webembed)
 runtime/           TypeScript agent runtime
 docs/              engine documentation
 scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh

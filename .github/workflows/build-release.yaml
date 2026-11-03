@@ -1,0 +1,53 @@
+---
+# Copyright ©2017-2026  Mr MXF   info@mrmxf.com
+# BSD-3-Clause License           https://opensource.org/license/bsd-3-clause/
+#
+#  nabu: build, check and release with clog. The work is in mrmxf/clog's
+#  reusable workflows; what this repo wants is data in .clog.yaml, and
+#  .clog-version pins the clog they install.
+#
+#    main / PR   build + every check (guards, lint, test, trivy scan)
+#    v* tag      build + publish a GitHub release: nabu and nabu-worker for
+#                linux/mac/windows, nabu-web-vX.Y.Z.tar.gz and checksums.txt
+#    manual      rebuild + republish the newest release tag
+#
+#  No secrets: the release uses the Actions token, and .clog.yaml has no
+#  ci.infisical block. Pinned to a clog release tag, not the moving
+#  `workflows` tag, so a CI-asset change in clog cannot alter this build.
+
+name: build-release
+run-name: ${{ github.workflow }} 🥷${{ github.actor }} (${{ github.event_name }} ${{ github.ref_name }})
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: false      # never cancel a half-finished publish
+
+jobs:
+  build:
+    uses: mrmxf/clog/.github/workflows/build-check.yaml@v1.3.0
+    permissions:
+      contents: read
+      id-token: write            # OIDC, for `clog CI run`
+      security-events: write     # SARIF upload of _clog_build/scan
+    with:
+      production: ${{ github.event_name == 'workflow_dispatch' }}
+
+  release:
+    needs: [build]
+    if: github.event_name != 'pull_request'
+    uses: mrmxf/clog/.github/workflows/deploy-probe.yaml@v1.3.0
+    permissions:
+      contents: write            # gh release create / upload
+      id-token: write
+    with:
+      production: ${{ github.event_name == 'workflow_dispatch' }}

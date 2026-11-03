@@ -96,7 +96,7 @@ func (t Tree) CopyTo(rel, dst string) error {
 	if err != nil {
 		return fmt.Errorf("copy %s: %w", t.Where(rel), err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("copy %s: %w", t.Where(rel), err)
