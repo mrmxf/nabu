@@ -35,6 +35,17 @@ be instant and free, so it is static. Only the live parts of a lesson (groups,
 realtime, agent jobs) need a container, and that container sleeps when idle. Logging in
 happens at the edge so it can overlap with the container waking.
 
+## Why a classroom laptop is a first-class mode
+
+The SaaS on Cloudflare is the canonical way to offer a course to many cohorts. But a
+lot of teaching happens in a room with unreliable Wi-Fi, for a group of students who
+need to be working within minutes. There, a single binary on the teacher's laptop,
+reached over the room's network, beats any cloud service: nothing to sign up for, no
+uplink needed, and the data never leaves the room unless the teacher exports it.
+
+Both modes run the same release, which keeps them honest. A feature that needs the
+internet must degrade in the classroom rather than break it.
+
 ## Why sync, not transactions
 
 The academy and a course container may each be asleep or down. A transaction needs

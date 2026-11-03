@@ -18,7 +18,7 @@ tutorial content belongs in nabu-tutorial.
 | Topic | File |
 |---|---|
 | Build, test, config, versions | [claude-build.md](claude-build.md) |
-| Deploy: today and the container/Cloudflare target | [claude-deploy.md](claude-deploy.md) |
+| Deploy: SaaS on Cloudflare vs classroom on a laptop; web app delivery | [claude-deploy.md](claude-deploy.md) |
 | Known issues and deferred work | [claude-backlog.md](claude-backlog.md) |
 | Why Nabu is shaped this way | [claude-human-narrative.md](claude-human-narrative.md) |
 | Domain vocabulary | [docs/glossary.md](docs/glossary.md) |
@@ -111,6 +111,19 @@ scripts/           build.sh, dev.sh, buildinfo.sh, check-widget-docs.sh
 - Accept the old spelling on input, never write it. Roster `classes:`, backup `class`,
   frontmatter `class_numbering`, `--class` and `?class=` all still read; exports write
   only the new names. Fold old fields into new ones at decode time, then clear them.
+
+### Deployment modes
+- Two first-class modes from ONE release: **canonical SaaS on Cloudflare** (static tier +
+  academy Worker/D1 + one container per course) and **interactive classroom on a
+  laptop** (one release binary on the room's LAN, works offline). See claude-deploy.md.
+- Every deploy doc and help page names its mode and links the modes help lesson. A
+  feature that only works in one mode says so.
+- The classroom must keep working with no internet: no hard dependency on the academy,
+  a CDN or a remote worker. Degrade instead: fast login, and agent jobs authored with
+  `sim_output_fallback: true`.
+- The web app is never committed. Release binaries and images embed it (`webembed`
+  tag, built in CI); library courses use `nabu web fetch` + `Options.Public`; SaaS
+  serves it from the static tier. See claude-deploy.md, "Delivering the web app".
 
 ### Agents
 - The worker contract is `GET /healthz` + `POST /v1/jobs/dispatch` (bearer, relative TTL).

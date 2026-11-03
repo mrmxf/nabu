@@ -13,6 +13,16 @@ A course is a folder of Markdown files, kept in its own repository. Nabu reads
 that course and drives students through it. The full tutorial, which teaches you
 to build a Nabu course by building one, lives in [nabu-tutorial][tutorial].
 
+## Two ways to run a course
+
+- **Online, as a service on Cloudflare** (canonical): course pages from the CDN, sign-in
+  at the edge, and one small container per course that sleeps when nobody is using it.
+- **In a classroom, on a laptop:** one `nabu` file on the teacher's laptop, students on
+  the room's Wi-Fi. No internet needed, and the data stays in the room.
+
+Both run the same release. Container and Cloudflare deployment are still being built;
+today Nabu runs as a single binary.
+
 ## Prerequisites
 
 - Go 1.26+
@@ -107,9 +117,10 @@ func main() {
 
 `./my-course seed` then `./my-course serve` work with no course files on disk. A
 config file given at run time (`-c`, `-C`, `./nabu.yaml`) still overrides the
-baked one. The single-page app is a build output, not part of the Go module: put
-the built `pb_public/` beside the data dir, or pass it as `Options.Public`. See
-the [package docs][godoc] for every option.
+baked one. The web app is a build output, not part of the Go module: each release
+will attach it as `nabu-web-vX.Y.Z.tar.gz`, fetched with `nabu web fetch` (planned)
+and passed as `Options.Public`. Until then, put a built `pb_public/` beside the
+data dir. See the [package docs][godoc] for every option.
 
 ## Agents
 
