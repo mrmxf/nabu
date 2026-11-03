@@ -22,10 +22,7 @@ ci:
     # below embeds webapp/dist.
     - name: web
       type: node
-      # Use the runner's preinstalled Node (SvelteKit needs >= 18.13). Installing
-      # the newest LTS (26) over it crashed npm in CI ("Class extends value
-      # undefined"); see claude-backlog.md M-16.
-      tools: [trivy]
+      # Node is pinned by .nvmrc (clog Install node reads it, as Go reads go.mod)
       with:
         dir: web
         out: webapp/dist

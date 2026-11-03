@@ -32,7 +32,7 @@ Run `npm run check`, which runs `svelte-kit sync` first.
 
 ## Release (clog)
 
-- `.clog.yaml` + `.clog-version` (clog v1.3.0): stacks `web` (node), `nabu` and `worker`
+- `.clog.yaml` + `.clog-version` (clog v1.3.1) + `.nvmrc` (Node 26.13.0): stacks `web` (node), `nabu` and `worker`
   (golang), a `github-release` target, and a `guards` check group.
 - A `vX.Y.Z` tag runs `.github/workflows/build-release.yaml` (clog's reusable workflows,
   pinned `@v1.3.0`): `clog build prod`, then a release with `nabu-<cpu>-<os>` (incl.
@@ -44,7 +44,7 @@ Run `npm run check`, which runs `svelte-kit sync` first.
 
 ## Facts
 
-- Go 1.26+, Node 22+, git-lfs. Module path `github.com/mrmxf/nabu`.
+- Go 1.26+, Node 26.13.0 (pinned in `.nvmrc`), git-lfs. Module path `github.com/mrmxf/nabu`.
 - PocketBase v0.39.5 (Go), pocketbase JS SDK ^0.26, Svelte ^5.1, SvelteKit ^2.8, Vite ^6,
   PicnicCSS ^7.1, Yjs ^13.6.
 - `mrmxf/util` packages used: `kfg` (config), `slogger` (logging), `buildinfo` (version).
