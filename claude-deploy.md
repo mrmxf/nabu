@@ -61,30 +61,28 @@ the Wi-Fi uplink off. When no worker is reachable, agent jobs authored with
 offline, so classroom content should set the fallback. The transport policy already
 allows http to LAN and loopback workers.
 
-## Hosts and routes (decided 2026-11-03)
+## Hosts and routes (decided 2026-11-03, revised 2026-11-12)
 
 - **Courses are anchored on `nabu.mrmxf.com`:** `https://nabu.mrmxf.com/<course>/…`,
   including the API (`/<course>/api/*`, routed to that course's container) and media.
-- **The course menu is served identically at `https://nabu.mrmxf.com/` and
-  `https://mrmxf.com/learn/`** by ONE academy Worker (`www-nabu-academy`).
-- `nabu.mrmxf.com` is a **Workers custom domain** of that Worker: `wrangler deploy` creates
-  the proxied DNS record and the certificate. Never add the record by hand.
-- `mrmxf.com/learn` uses **two zone routes on the same Worker**, `mrmxf.com/learn` and
-  `mrmxf.com/learn/*`. Never `/learn*`, which would also catch `/learning…`. Worker routes
-  match before the `www-mrmxf-prod` Pages site, as `/admin*`, `/forms/contact*` and `/get/*`
-  already do. No DNS change on the apex.
-- **Handler contract:**
-  - The menu is one renderer for both hosts.
-  - `mrmxf.com/learn` gets a 301 to `/learn/`.
-  - Any other `mrmxf.com/learn/<path>` gets a 301 to `https://nabu.mrmxf.com/<path>`.
-  - Course links and menu assets are absolute to `https://nabu.mrmxf.com`. Fonts are
-    served with `Access-Control-Allow-Origin: https://mrmxf.com`.
-  - Both copies carry `<link rel="canonical" href="https://nabu.mrmxf.com/">`.
-- **Login cookies are host-only on `nabu.mrmxf.com`.** Never `Domain=.mrmxf.com`: the
-  apex's other Workers (admin, forms) must not receive them. The apex menu is the public
-  catalogue; personal "continue" lives on the course host.
-- **Dev mode mirrors it:** `staging.mrmxf.com/learn` and `nabu-staging.mrmxf.com`
-  (`www-nabu-academy-dev`).
+  The old Secret Agents deploy was detached from it on 2026-11-12.
+- `nabu.mrmxf.com` is a **Workers custom domain** of the academy Worker
+  (`www-nabu-academy`): `wrangler deploy` creates the proxied DNS record and the
+  certificate. Never add the record by hand.
+- **nabu owns no routes on `mrmxf.com`.** The apex and its `/learn/` tree belong to
+  `gitlab.com/mrmxf/www-mrmxf` (Hugo on Pages, with its own Workers for admin, forms,
+  get and r).
+- **The menu at `mrmxf.com/learn/` is drawn in the browser** by a small inline script in
+  www-mrmxf's `content/learn/_index.md`. It reads the public catalogue
+  `https://nabu.mrmxf.com/content/index.json` (written by `nabu build`) and lists the
+  courses beside the Hugo ones. If nabu is down, the Hugo page still renders.
+- **The catalogue is a contract:** `/content/index.json` must keep `courses[].slug`,
+  `title`, `summary`, `order`, `logo`, `guest_access`, `help` and `lessons[].slug`, and must
+  be served with `Access-Control-Allow-Origin: *` (a Pages `_headers` rule, or the academy
+  Worker). It is public data only.
+- **Login cookies are host-only on `nabu.mrmxf.com`.** Never `Domain=.mrmxf.com`.
+- **Dev mode mirrors it:** `nabu-staging.mrmxf.com` (`www-nabu-academy-dev`), read by
+  `staging.mrmxf.com/learn/`.
 - Course hosts stay first-level subdomains: Universal SSL does not cover
   `x.nabu.mrmxf.com`.
 
@@ -116,3 +114,10 @@ optional `WORKER_ACCESS_CLIENT_ID/SECRET`, `WORKER_PROBE_TIMEOUT`,
 
 Infisical injects them (`infisical run --env <env> -- bin/nabu serve`). Nothing secret
 is ever in a committed file; config names env vars via `*_env` keys.
+
+The canonical deploy set (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`; Infisical project `nabu`, folder
+`/nabu-core`) and the exact Cloudflare token permissions are in
+`help/using-nabu/reference/06-cloudflare-account.md`. `scripts/cf-token-check.sh`
+proves a token: read-only, prints PASS/FAIL, never a value. Change a permission there
+first; nabu-tutorial follows (backlog M-17).

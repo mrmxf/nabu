@@ -13,6 +13,9 @@
 #   nabu-worker-<cpu>-<os>   the stub agent worker (contract reference)
 #   nabu-web-vX.Y.Z.tar.gz   the web app alone, for library courses
 
+kfg:
+  releases-path: "data/releases.yaml"   # release history (clog BC releases)
+
 ci:
   artifact: nabu-release         # build uploads it, the release job downloads it
   title: "nabu"
@@ -44,18 +47,19 @@ ci:
         exe: nabu-worker
         title: Nabu stub worker
 
-  # Secrets come from Infisical (EU), project ci-mrmxf, folder /nabu (which
-  # imports /shared). Folder per repo, as every mrmxf repo (decision D-I.1).
+  # Secrets come from Infisical (EU), project nabu, folder /nabu-core: what the
+  # base nabu repo needs to deploy and run. There is no prod in 2026: the prod
+  # environment holds the same values as dev until it does.
   infisical:
     domain: "https://eu.infisical.com"
-    project-id: "233acc53-17fc-4b50-bb5d-4f5c38995978"   # ci-mrmxf
-    project-slug: "ci-mrmxf-2026"
-    path: "/nabu"                   # this repo's folder; imports /shared
+    project-id: "9148f633-3138-434c-a7aa-9d55d72e4fbd"   # nabu
+    project-slug: "9148f633-3138-434c-a7aa-9d55d72e4fbd"
+    path: "/nabu-core"
     env:                            # mode -> Infisical environment slug
       dev:  "dev"
       prod: "prod"
     identity:                       # CI OIDC logins (public ids, safe to commit)
-      github:                       # the identities' subjects must list mrmxf/nabu
+      github:                       # must be granted on THIS project; subjects list mrmxf/nabu
         dev-uuid:  "de297d7e-7bb6-4b9c-a75b-da7d40a05064"   # gh-mrmxf-dev
         prod-uuid: "89db3457-d3de-406d-8ecc-81dd13d744dc"   # gh-mrmxf-prod
 
