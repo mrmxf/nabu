@@ -20,6 +20,8 @@ tutorial content belongs in nabu-tutorial.
 | Build, test, config, versions | [claude-build.md](claude-build.md) |
 | Deploy: SaaS on Cloudflare vs classroom on a laptop; web app delivery | [claude-deploy.md](claude-deploy.md) |
 | Known issues and deferred work | [claude-backlog.md](claude-backlog.md) |
+| Open plan: SaaS target flow, academy contracts, build steps | [docs/plan-saas.md](docs/plan-saas.md) |
+| Open plan: clog/util additions U4–U9, nabu tooling commands | [docs/plan-tooling.md](docs/plan-tooling.md) |
 | Why Nabu is shaped this way | [claude-human-narrative.md](claude-human-narrative.md) |
 | Domain vocabulary | [docs/glossary.md](docs/glossary.md) |
 | Env vars and secrets | [docs/secrets.md](docs/secrets.md) |
