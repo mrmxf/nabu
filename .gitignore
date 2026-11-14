@@ -19,3 +19,6 @@ runtime/dist/
 *:Zone.Identifier
 _clog_build/
 _clog_deploy/
+
+# local working notes (tmp-handover-plan.md etc.), never committed
+/tmp-*.md

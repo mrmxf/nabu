@@ -31,7 +31,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
+	"strings"
 
+	"github.com/mrmxf/util/buildinfo"
 	"github.com/mrmxf/util/slogger"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -149,6 +152,8 @@ func New(opts Options) *App {
 		opts:       opts,
 	}
 	pb := app.PocketBase
+	// `nabu --version`; without it cobra prints PocketBase's "(untracked)".
+	pb.RootCmd.Version = Version()
 
 	migratecmd.MustRegister(pb, pb.RootCmd, migratecmd.Config{
 		Automigrate: opts.Automigrate,
@@ -391,3 +396,45 @@ func enableServePortFlag(app *pocketbase.PocketBase) {
 		return cmd.Flags().Set("http", fmt.Sprintf("127.0.0.1:%d", port))
 	}
 }
+
+// Version describes the running binary for `--version`: the release tag, the
+// build mode, the short commit and the build date, from the -ldflags that
+// clog's build injects (e.g. "v0.1.2 (prod, b54a6fb, 2026-11-14)"). In a
+// course binary built on the library, it also names the nabu module version.
+func Version() string {
+	bi := buildinfo.Info()
+	mode := "dev"
+	if buildinfo.IsProductionBuild {
+		mode = "prod"
+	}
+	tag, hash := bi.Short, bi.CommitId
+	info, ok := debug.ReadBuildInfo()
+	// a plain `go build` injects nothing: fall back to Go's own VCS stamp
+	if strings.HasPrefix(hash, "xxxxx") && ok {
+		hash = "unknown"
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				hash = s.Value
+			}
+		}
+	}
+	if tag == "" || strings.HasPrefix(tag, "-") {
+		tag = "untagged"
+	}
+	if len(hash) > 7 {
+		hash = hash[:7]
+	}
+	v := fmt.Sprintf("%s (%s, %s, %s)", tag, mode, hash, bi.Date)
+	if ok && info.Main.Path != modulePath {
+		for _, dep := range info.Deps {
+			if dep.Path == modulePath {
+				v += ", nabu " + dep.Version
+			}
+		}
+	}
+	return v
+}
+
+// modulePath is nabu's Go module path, used to find its version in a course
+// binary's build info.
+const modulePath = "github.com/mrmxf/nabu"
