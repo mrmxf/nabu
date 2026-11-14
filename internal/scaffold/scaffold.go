@@ -1,6 +1,8 @@
 // Package scaffold creates a new Nabu course repository (`nabu init`): the
 // course config, one course with one lesson and slide, git ignore and LFS rules,
-// and — for a library-form course — a go.mod and main.go that import Nabu.
+// the clog files that build and check it in CI (.clog.yaml, .clog-version and a
+// GitHub or GitLab pipeline), and — for a library-form course — a go.mod and
+// main.go that import Nabu.
 package scaffold
 
 import (
@@ -30,6 +32,18 @@ type Options struct {
 	Title   string // course title
 	Library bool   // also write go.mod + main.go importing Nabu
 	Module  string // Go module path (library only)
+	CI      string // pipeline to write: github (default), gitlab or none
+}
+
+// ClogVersion is the clog release a new course pins in .clog-version and its
+// pipeline. Keep it equal to this repo's own .clog-version (a test checks).
+const ClogVersion = "v1.3.5"
+
+// ciFiles maps Options.CI to the pipeline template and where it goes.
+var ciFiles = map[string]struct{ tmpl, out string }{
+	"github": {"ci/github.yaml.tmpl", filepath.Join(".github", "workflows", "course.yaml")},
+	"gitlab": {"ci/gitlab.yml.tmpl", ".gitlab-ci.yml"},
+	"none":   {},
 }
 
 // data is what the templates see.
@@ -37,6 +51,7 @@ type data struct {
 	Options
 	LessonTitle string
 	Binary      string
+	ClogVersion string
 }
 
 // defaultLesson is the first lesson's slug when none is given.
@@ -53,8 +68,11 @@ func NewCommand() *cobra.Command {
 		Short: "Create a new course repository",
 		Long: "Create a new Nabu course in <dir>: nabu.yaml, content/<course>/<lesson>/\n" +
 			"with a welcome slide, .gitignore (media and build output), .gitattributes\n" +
-			"(git-lfs for binaries) and a README. With --library, also a go.mod and\n" +
-			"main.go that build the course into its own binary with Nabu as a library.",
+			"(git-lfs for binaries), a README, and the clog files that build and check\n" +
+			"it in CI: .clog.yaml, .clog-version and a pipeline (--ci github|gitlab|none).\n" +
+			"Nothing deploys until .clog.yaml's targets and secrets are filled in.\n" +
+			"With --library, also a go.mod and main.go that build the course into its own\n" +
+			"binary with Nabu as a library; `go run . web fetch` then fetches the web app.",
 		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -67,6 +85,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.Title, "title", "", "course title (default: from the course slug)")
 	cmd.Flags().BoolVar(&o.Library, "library", false, "also write go.mod + main.go (Nabu as a Go library)")
 	cmd.Flags().StringVar(&o.Module, "module", "", "Go module path for --library (default: example.nabu/<course>)")
+	cmd.Flags().StringVar(&o.CI, "ci", "github", "pipeline to write: github, gitlab or none")
 	return cmd
 }
 
@@ -92,13 +111,20 @@ func Create(o Options) error {
 	if o.Module == "" {
 		o.Module = "example.nabu/" + o.Course
 	}
+	if o.CI == "" {
+		o.CI = "github"
+	}
+	pipeline, ok := ciFiles[o.CI]
+	if !ok {
+		return fmt.Errorf("init: --ci %q must be github, gitlab or none", o.CI)
+	}
 	if entries, err := os.ReadDir(o.Dir); err == nil && len(entries) > 0 {
 		return fmt.Errorf("init: %s is not empty", o.Dir)
 	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("init: %w", err)
 	}
 
-	d := data{Options: o, LessonTitle: titleCase(o.Lesson), Binary: o.Course}
+	d := data{Options: o, LessonTitle: titleCase(o.Lesson), Binary: o.Course, ClogVersion: ClogVersion}
 	lessonDir := filepath.Join("content", o.Course, o.Lesson)
 	files := []struct{ tmpl, out string }{
 		{"nabu.yaml.tmpl", "nabu.yaml"},
@@ -108,6 +134,11 @@ func Create(o Options) error {
 		{"course_index.md.tmpl", filepath.Join("content", o.Course, "_index.md")},
 		{"lesson_index.md.tmpl", filepath.Join(lessonDir, "_index.md")},
 		{"slide_welcome.md.tmpl", filepath.Join(lessonDir, "010-welcome.md")},
+		{"clog.yaml.tmpl", ".clog.yaml"},
+		{"clog-version.tmpl", ".clog-version"},
+	}
+	if pipeline.tmpl != "" {
+		files = append(files, pipeline)
 	}
 	if o.Library {
 		files = append(files,
@@ -119,7 +150,8 @@ func Create(o Options) error {
 			return err
 		}
 	}
-	slog.Info("course created", "dir", o.Dir, "course", o.Course, "lesson", o.Lesson, "library", o.Library)
+	slog.Info("course created", "dir", o.Dir, "course", o.Course, "lesson", o.Lesson,
+		"library", o.Library, "ci", o.CI, "clog", ClogVersion)
 	return nil
 }
 

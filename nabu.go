@@ -53,6 +53,7 @@ import (
 	"github.com/mrmxf/nabu/internal/seed"
 	"github.com/mrmxf/nabu/internal/serverctl"
 	"github.com/mrmxf/nabu/internal/students"
+	"github.com/mrmxf/nabu/internal/webfetch"
 	"github.com/mrmxf/nabu/webapp"
 
 	// register schema migrations for side effects
@@ -93,7 +94,8 @@ type Options struct {
 	// with -tags webembed (release binaries), else the pb_public folder beside
 	// the data dir. The SPA is a build output (web/, `npm run build`), not part of
 	// the Go module: a library course gets it from the release asset
-	// nabu-web-vX.Y.Z.tar.gz (`nabu web fetch`, planned).
+	// nabu-web-vX.Y.Z.tar.gz with `nabu web fetch`, then passes
+	// os.DirFS("nabu-web").
 	Public fs.FS
 
 	// DataDir overrides DefaultDataDir. The --dir flag still wins.
@@ -126,7 +128,7 @@ type App struct {
 
 // preBootstrapCommands run without opening or creating a database: they only
 // read course files (build) or write a new course repo (init).
-var preBootstrapCommands = map[string]bool{"build": true, "init": true}
+var preBootstrapCommands = map[string]bool{"build": true, "init": true, "web": true, "fetch": true}
 
 // New builds a Nabu App. It registers Nabu's commands (seed, stop, users,
 // admin, snapshot, install, migrate), global flags (-c/--config,
@@ -173,6 +175,7 @@ func New(opts Options) *App {
 	pb.RootCmd.AddCommand(seed.NewCommand(pb, sources))
 	pb.RootCmd.AddCommand(seed.NewBuildCommand(sources, app.webApp()))
 	pb.RootCmd.AddCommand(scaffold.NewCommand())
+	pb.RootCmd.AddCommand(webfetch.NewCommand())
 	pb.RootCmd.AddCommand(serverctl.NewStopCommand(pb))
 	pb.RootCmd.AddCommand(students.NewCommand(pb))
 	pb.RootCmd.AddCommand(admin.NewCommand(pb))

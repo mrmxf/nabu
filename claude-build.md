@@ -16,7 +16,8 @@ bash scripts/check-widget-docs.sh      # widget catalogue == 40-widgets.md; sile
 ```
 
 ```bash
-bin/nabu init <dir> [--lesson slug] [--library --module path]   # new course repo
+bin/nabu init <dir> [--lesson slug] [--library --module path] [--ci github|gitlab|none]
+bin/nabu web fetch [dir] [--version vX.Y.Z]   # library courses: the release web app, sha256-checked
 bin/nabu seed [--content d] [--assets d] [--schedules f] [--help-content d] [--strict]
 bin/nabu build [--out dist] [--public d]   # static site: web app + live lessons as JSON
 bin/nabu serve [--http=127.0.0.1:8090] [--dir path/to/pb_data] [--media-dir store]
@@ -32,15 +33,24 @@ Run `npm run check`, which runs `svelte-kit sync` first.
 
 ## Release (clog)
 
-- `.clog.yaml` + `.clog-version` (clog v1.3.1) + `.nvmrc` (Node 26.13.0): stacks `web` (node), `nabu` and `worker`
+- `.clog.yaml` + `.clog-version` (clog v1.3.5) + `.nvmrc` (Node 26.13.0): stacks `web` (node), `nabu` and `worker`
   (golang), a `github-release` target, and a `guards` check group.
 - A `vX.Y.Z` tag runs `.github/workflows/build-release.yaml` (clog's reusable workflows,
-  pinned `@v1.3.0`): `clog build prod`, then a release with `nabu-<cpu>-<os>` (incl.
+  pinned `@v1.3.5`): `clog build prod`, then a release with `nabu-<cpu>-<os>` (incl.
   Windows), `nabu-worker-*`, `nabu-web-vX.Y.Z.tar.gz` and `checksums.txt`.
 - `guards`: identities are `@nabu.example` only (not LICENSE), no ko, widget docs match.
+- Bumping clog: change `.clog-version`, the `@vX.Y.Z` pins in `.github/workflows/`, and
+  `scaffold.ClogVersion` (what `nabu init` pins in a new course) together;
+  `TestClogVersionMatchesRepo` fails if the last two disagree.
+- `nabu init` writes a course's `.clog.yaml` (a `site` stack whose make phase
+  `bc-nabu` runs `nabu build --strict --out _clog_build/public`, plus a `golang` stack
+  with `--library`), `.clog-version` and a GitHub or GitLab pipeline. Deploy stays off
+  until the course fills in `ci.targets` and `ci.infisical`.
+- `nabu build` writes `_headers` (Cloudflare Pages) so `/content/index.json` is served
+  with `Access-Control-Allow-Origin: *`; nothing else is opened cross-origin.
   A guard's `catch:` must `exit 1`: clog fails a check only on a non-zero catch.
 - Lint (golangci-lint + staticcheck) must stay at 0 issues; CI runs it.
-- Locally, put a verified clog v1.3.0 on PATH and run with `GOWORK=off` as CI does.
+- Locally, put a verified clog v1.3.5 on PATH and run with `GOWORK=off` as CI does.
 
 ## Facts
 

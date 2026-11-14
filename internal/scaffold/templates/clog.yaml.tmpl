@@ -1,0 +1,93 @@
+# clog configuration for the {{.Title}} course: how CI builds, checks and
+# deploys it. It overlays clog's built-in config; reference: clog CI --config-help.
+#
+#   clog build          checks, then the static site in _clog_build/public
+#   clog build --fast   the site only
+#   clog deploy         once ci.targets and ci.infisical below are filled in
+#
+# Mode: canonical SaaS on Cloudflare (the static tier: guest lessons and the
+# catalogue, no server). A classroom laptop needs none of this: it runs the
+# release nabu binary (nabu seed, then nabu serve --http 0.0.0.0:8090).
+
+ci:
+  artifact: {{.Course}}-site     # build uploads it, the deploy job downloads it
+  title: "{{.Title}}"
+
+  stack:
+    # The static site. Typed hugo because it is a static site; the make phase
+    # is nabu's (snippets.bc-nabu below), so hugo itself is never installed.
+    - name: site
+      type: hugo
+{{- if .Library}}
+      tools: [trivy, jq]          # Go comes with the {{.Binary}} stack
+{{- else}}
+      tools: [nabu, trivy, jq]    # clog Install nabu: the newest release, sha256-checked
+{{- end}}
+      chk: [pre-build, scan]
+      make: [nabu]
+{{- if .Library}}
+    # The course binary: Nabu as a Go library, content baked in.
+    - name: {{.Binary}}
+      type: golang
+      chk: [pre-build, lint, test, scan]
+      with:
+        go-main: .
+        exe: {{.Binary}}
+        title: "{{.Title}}"
+{{- end}}
+
+  policy:
+    # Every event builds and checks. Nothing deploys until you switch it on:
+    # fill in targets and infisical, then uncomment deploy.
+    build: [branch, tag, pr, dispatch, local]
+    # deploy:
+    #   dev:  {branches: [main]}     # push main  -> the staging project
+    #   prod: {tags: ["v*"]}         # tag vX.Y.Z -> the live project
+
+  # targets:
+  #   pages:
+  #     kind: cloudflare-pages
+  #     stack: site
+  #     require: [CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID]   # from Infisical
+  #     dev:
+  #       dir: "_clog_build/public"
+  #       project: "{{.Course}}-staging"
+  #       production-branch: "main"
+  #     prod:
+  #       dir: "_clog_build/public"
+  #       project: "{{.Course}}"
+  #       production-branch: "main"
+
+  # Secrets live in Infisical, never in the repo or the CI settings. A half-filled
+  # block is an error, so uncomment it whole. Set-up: clog CI --config-help;
+  # check the identities with: clog CI oidc
+  # infisical:
+  #   domain: "https://eu.infisical.com"
+  #   project-id: "<uuid>"
+  #   path: "/{{.Course}}"
+  #   env: {dev: dev, prod: prod}
+  #   identity:
+  #     github: {dev-uuid: "<uuid>", prod-uuid: "<uuid>"}
+  #     gitlab: {dev-uuid: "<uuid>", prod-uuid: "<uuid>"}
+
+snippets:
+  project:
+    config: |
+      export PROJECT={{.Course}}
+      export EXE={{.Binary}}
+      export TITLE="{{.Title}}"
+
+  # The `nabu` make phase: render the course into the static site. --strict
+  # fails the build on content warnings, not only errors.
+  bc-nabu: |
+    eval "$(clog Source project config); $(clog Crayon)"
+    out="_clog_build/public"
+    clog BC stash log -1 build -2 nabu -3 start -I "build nabu static site -> $out"
+{{- if .Library}}
+    # the web app is a Nabu release asset, not part of the Go module
+    go run . web fetch || { clog BC stash log -1 build -2 nabu -3 web -E "nabu web fetch failed"; exit 1; }
+    go run . build --strict --out "$out" || { clog BC stash log -1 build -2 nabu -3 site -E "nabu build failed"; exit 1; }
+{{- else}}
+    nabu build --strict --out "$out" || { clog BC stash log -1 build -2 nabu -3 site -E "nabu build failed"; exit 1; }
+{{- end}}
+    clog BC stash log -1 build -2 nabu -3 done -I "static site in $out ($(find "$out" -type f | wc -l) files)"

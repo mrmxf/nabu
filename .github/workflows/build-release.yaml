@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   build:
-    uses: mrmxf/clog/.github/workflows/build-check.yaml@v1.3.0
+    uses: mrmxf/clog/.github/workflows/build-check.yaml@v1.3.5
     permissions:
       contents: read
       id-token: write            # OIDC, for `clog CI run`
@@ -45,7 +45,7 @@ jobs:
   release:
     needs: [build]
     if: github.event_name != 'pull_request'
-    uses: mrmxf/clog/.github/workflows/deploy-probe.yaml@v1.3.0
+    uses: mrmxf/clog/.github/workflows/deploy-probe.yaml@v1.3.5
     permissions:
       contents: write            # gh release create / upload
       id-token: write

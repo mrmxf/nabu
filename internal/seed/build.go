@@ -22,6 +22,32 @@ import (
 // clears a directory that carries it, so `--out` can never wipe an unrelated one.
 const BuildMarker = ".nabu-build"
 
+// HeadersFile is the static host's header rules (Cloudflare Pages `_headers`;
+// other hosts ignore it). It makes the public catalogue readable cross-origin,
+// so another site's course menu can list this deployment's courses.
+const HeadersFile = "_headers"
+
+// headersRules is written to HeadersFile unless the web app already ships one.
+// Only the catalogue: it is public data by design (claude-deploy.md, "Hosts
+// and routes"); lessons stay same-origin.
+const headersRules = `# written by nabu build: the course catalogue is public and readable cross-origin
+/content/index.json
+  Access-Control-Allow-Origin: *
+`
+
+// writeHeaders writes HeadersFile into out, leaving one the web app supplied.
+func writeHeaders(out string) error {
+	file := filepath.Join(out, HeadersFile)
+	if _, err := os.Stat(file); err == nil {
+		slog.Warn("web app ships its own _headers; /content/index.json may lack CORS", "file", file)
+		return nil
+	}
+	if err := os.WriteFile(file, []byte(headersRules), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", file, err)
+	}
+	return nil
+}
+
 // IndexFile and LessonFile are the published JSON documents of a static build,
 // under /content/ beside the lesson assets so they can never collide with an app
 // route: /content/index.json and /content/<course>/<lesson>/lesson.json.
@@ -236,6 +262,9 @@ func Build(p Paths, src Sources, publicFS fs.FS, o BuildOptions) error {
 		return err
 	}
 	if err := writeJSON(filepath.Join(o.Out, filepath.FromSlash(IndexFile)), idx); err != nil {
+		return err
+	}
+	if err := writeHeaders(o.Out); err != nil {
 		return err
 	}
 	slog.Info("build complete", "out", o.Out, "courses", len(idx.Courses), "lessons", lessons,

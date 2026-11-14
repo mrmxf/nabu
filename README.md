@@ -129,9 +129,11 @@ func main() {
 `./my-course seed` then `./my-course serve` work with no course files on disk. A
 config file given at run time (`-c`, `-C`, `./nabu.yaml`) still overrides the
 baked one. The web app is a build output, not part of the Go module: each release
-attaches it as `nabu-web-vX.Y.Z.tar.gz` (listed in `checksums.txt`). Unpack it and
-pass it as `Options.Public`, or put it in `pb_public/` beside the data dir;
-`nabu web fetch` will automate this. See the [package docs][godoc] for every option.
+attaches it as `nabu-web-vX.Y.Z.tar.gz` (listed in `checksums.txt`).
+`./my-course web fetch` (or `go run . web fetch`) downloads the release your
+`go.mod` requires, checks it against `checksums.txt` and unpacks it into
+`nabu-web/`; pass that as `Options.Public: os.DirFS("nabu-web")`, as the
+`nabu init --library` template does. See the [package docs][godoc] for every option.
 
 ## Agents
 

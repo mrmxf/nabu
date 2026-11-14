@@ -1,0 +1,45 @@
+# {{.Title}}: build, check and (once switched on) deploy with clog. The work is
+# in mrmxf/clog's reusable workflows; what this course wants is data in
+# .clog.yaml, and .clog-version pins the clog they install.
+#
+#    main / PR   build + checks (secret scan, vulnerability scan, strict content)
+#    v* tag      the same, then deploy when .clog.yaml ci.policy.deploy says so
+#
+# Pinned to a clog release tag, so a CI change in clog cannot alter this build.
+
+name: course
+run-name: ${{"{{"}} github.workflow {{"}}"}} (${{"{{"}} github.event_name {{"}}"}} ${{"{{"}} github.ref_name {{"}}"}})
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: course-${{"{{"}} github.ref {{"}}"}}
+  cancel-in-progress: false      # never cancel a half-finished deploy
+
+jobs:
+  build:
+    uses: mrmxf/clog/.github/workflows/build-check.yaml@{{.ClogVersion}}
+    permissions:
+      contents: read
+      id-token: write            # OIDC login to Infisical, for `clog CI run`
+      security-events: write     # SARIF upload of the scans
+    with:
+      production: ${{"{{"}} github.event_name == 'workflow_dispatch' {{"}}"}}
+
+  deploy:
+    needs: [build]
+    if: github.event_name != 'pull_request'
+    uses: mrmxf/clog/.github/workflows/deploy-probe.yaml@{{.ClogVersion}}
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      production: ${{"{{"}} github.event_name == 'workflow_dispatch' {{"}}"}}

@@ -23,7 +23,16 @@ func main() {
 		slog.Error("embedded content", "err", err)
 		os.Exit(1)
 	}
-	app := nabu.New(nabu.Options{Content: course, ConfigYAML: config})
+	opts := nabu.Options{Content: course, ConfigYAML: config}
+	// The web app is a Nabu release asset, not part of the Go module:
+	// `{{.Binary}} web fetch` (or `go run . web fetch`) puts the release that
+	// go.mod requires in nabu-web/, checked against its checksums.txt.
+	if st, err := os.Stat("nabu-web"); err == nil && st.IsDir() {
+		opts.Public = os.DirFS("nabu-web")
+	} else if len(os.Args) > 1 && os.Args[1] == "serve" {
+		slog.Warn("no web app in ./nabu-web: the API runs, the pages do not", "fix", "{{.Binary}} web fetch")
+	}
+	app := nabu.New(opts)
 	if err := app.Start(); err != nil {
 		slog.Error("{{.Binary}} exited", "err", err)
 		os.Exit(1)

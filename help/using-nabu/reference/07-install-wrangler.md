@@ -41,6 +41,14 @@ Pick one:
 
 Check with `wrangler --version`.
 
+The clog recipes for `node` and `wrangler` need **clog v1.3.1 or later**. An older clog
+says `tool "wrangler" not found in manifest`. Check with `clog --version`, and
+upgrade from inside the repo, which installs the version nabu pins in `.clog-version`:
+
+```bash
+bash <(curl -fsSL https://github.com/mrmxf/clog/releases/latest/download/get-clog.sh)
+```
+
 ## 3. Connect it to your token
 
 wrangler can log in two ways. **Use the token**, so what you do on your laptop is

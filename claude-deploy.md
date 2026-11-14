@@ -91,9 +91,13 @@ allows http to LAN and loopback workers.
 - Release CI builds the web app ONCE per `v*` tag. It is never committed.
 - Release binaries and the container image embed it with a build tag (`webembed`)
   over a folder generated only in CI.
-- Each GitHub release attaches `nabu-web-vX.Y.Z.tar.gz` + `.sha256`. Library courses
-  run `nabu web fetch [dir]`, which picks the version from build info or `go.mod` and
-  verifies the checksum, then pass it as `nabu.Options.Public`.
+- Each GitHub release attaches `nabu-web-vX.Y.Z.tar.gz`, listed in `checksums.txt`.
+  Library courses run `nabu web fetch [dir]` (`internal/webfetch`, default `nabu-web/`):
+  the version is `--version`, else what `./go.mod` requires, else the binary's own
+  build info; only a release tag is accepted. It checks the sha256 against
+  `checksums.txt`, unpacks safely into a fresh folder with a `.nabu-web-version`
+  marker and swaps it in. A folder already holding that release is left alone, so it
+  works offline once fetched. Then pass it as `nabu.Options.Public`.
 - In SaaS the browser loads it from the static tier (F); the container serves `/api`
   and the live parts.
 - Fallback: `pb_public/` beside the data dir, which is the dev path.

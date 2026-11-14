@@ -1,0 +1,21 @@
+# {{.Title}}: GitLab CI with clog. Everything is the shared template from
+# mrmxf/clog (jobs clog-build and clog-deploy); this file only says WHEN a
+# pipeline runs. WHETHER it builds or deploys, and in which mode, is
+# .clog.yaml ci.policy:
+#    push / merge request  build + checks (a merge request never gets a secret)
+#    tag vX.Y.Z            the same, then deploy once ci.policy.deploy is on
+#
+# No secrets in GitLab CI/CD variables: jobs log in to Infisical with their
+# OIDC id_token (clog CI --config-help; check with clog CI oidc).
+
+include:
+  - remote: https://raw.githubusercontent.com/mrmxf/clog/{{.ClogVersion}}/gitlab/clog.gitlab-ci.yml
+    inputs:
+      audience: https://eu.infisical.com   # = ci.infisical.domain = identity Audiences
+
+stages: [build, deploy]
+
+# one deploy at a time, never cancelled half-way
+clog-deploy:
+  resource_group: {{.Course}}
+  interruptible: false

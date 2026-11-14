@@ -2,6 +2,15 @@
 pb_data*
 pb_public*
 dist/
+_clog_build/
+_clog_deploy/
+{{- if .Library}}
+# the web app, from `go run . web fetch` (a Nabu release asset)
+/nabu-web/
+# the course binary (root only: content/{{.Course}}/ shares its name)
+/{{.Binary}}
+/{{.Binary}}.exe
+{{- end}}
 # bulky lesson media lives in the media store, not in git:
 # /content/<course>/<lesson>/media/<asset> is served from `nabu serve --media-dir`
 content/*/*/media/

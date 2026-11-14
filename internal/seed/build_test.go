@@ -51,6 +51,9 @@ func TestBuildPublishesOnlyLiveContent(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
+	if h, _ := os.ReadFile(filepath.Join(out, HeadersFile)); !strings.Contains(string(h), "/content/index.json\n  Access-Control-Allow-Origin: *") {
+		t.Errorf("_headers does not open the catalogue to other origins:\n%s", h)
+	}
 	for _, f := range []string{"index.html", BuildMarker, "content/index.json", "content/c/live/lesson.json", "content/c/live/a/pic.svg"} {
 		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
 			t.Errorf("missing %s: %v", f, err)

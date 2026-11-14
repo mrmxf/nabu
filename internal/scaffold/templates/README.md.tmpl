@@ -20,6 +20,27 @@ go build -o {{.Binary}} .
 ./{{.Binary}} seed && ./{{.Binary}} serve
 ```
 
-The web app is a build output of Nabu, not part of the Go module: put a built
-`pb_public/` beside the data dir (see Nabu's README).
+The web app is a build output of Nabu, not part of the Go module. Fetch the
+release that `go.mod` requires (checked against its `checksums.txt`) into
+`nabu-web/`, which `main.go` serves:
+
+```bash
+go run . web fetch
+```
 {{- end}}
+
+## Build and deploy with clog
+
+`.clog.yaml` says how CI builds this course, and `.clog-version` pins the
+[clog](https://github.com/mrmxf/clog) it uses.
+{{- if eq .CI "github"}} `.github/workflows/course.yaml` runs it on GitHub.
+{{- else if eq .CI "gitlab"}} `.gitlab-ci.yml` runs it on GitLab.
+{{- end}}
+
+```bash
+clog build     # checks, then the static site in _clog_build/public
+```
+
+Every push builds and checks; nothing deploys until you fill in `ci.targets`
+and `ci.infisical` in `.clog.yaml` and switch on `ci.policy.deploy`
+(`clog CI --config-help`).
