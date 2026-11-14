@@ -51,7 +51,19 @@ are listed in [docs/secrets.md][secrets]. The academy's keys arrive with the aca
 
 **CI holds no secrets at all.** GitHub Actions logs in to Infisical with a machine
 identity (OIDC), so nothing is pasted into GitHub. The identity must be added to the
-project, and its allowed subjects must include the repository, e.g. `repo:mrmxf/nabu`.
+project, and its allowed subjects must match what GitHub sends. Ask GitHub first:
+
+```bash
+gh api repos/<owner>/<repo>/actions/oidc/customization/sub
+```
+
+- `"use_immutable_subject": true` (newer repos): the subject carries the owner and
+  repository ids, e.g. `repo:mrmxf@19326048/nabu@1444420835:ref:refs/tags/v0.1.2`.
+  Use the `sub_claim_prefix` it prints: `<prefix>:ref:refs/{tags/v*,heads/main}`.
+- otherwise: `repo:<owner>/<repo>:ref:refs/{tags/v*,heads/main}`.
+
+A brace list needs a comma: `{nabu}` on its own matches the literal text `{nabu}`.
+A mismatch shows in CI as `HTTP 403: Access denied: OIDC subject not allowed`.
 
 ## 1. Create the API token
 
