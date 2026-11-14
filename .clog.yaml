@@ -52,16 +52,16 @@ ci:
   # environment holds the same values as dev until it does.
   infisical:
     domain: "https://eu.infisical.com"
-    project-id: "9148f633-3138-434c-a7aa-9d55d72e4fbd"   # nabu
-    project-slug: "9148f633-3138-434c-a7aa-9d55d72e4fbd"
+    project-id: "ee606f47-f67f-494d-9f42-5bbf49d73eb1"   # nabu
+    project-slug: "nabu-o-agj"
     path: "/nabu-core"
     env:                            # mode -> Infisical environment slug
       dev:  "dev"
       prod: "prod"
     identity:                       # CI OIDC logins (public ids, safe to commit)
       github:                       # must be granted on THIS project; subjects list mrmxf/nabu
-        dev-uuid:  "de297d7e-7bb6-4b9c-a75b-da7d40a05064"   # gh-mrmxf-dev
-        prod-uuid: "89db3457-d3de-406d-8ecc-81dd13d744dc"   # gh-mrmxf-prod
+        dev-uuid:  "bd53c0d1-0de9-4e7f-8478-f699e053a9f0"   # gh-mrmxf-dev
+        prod-uuid: "207f4f97-0d8d-41e4-8230-29d9c48e5357"   # gh-mrmxf-prod
 
   policy:
     # Every event builds; only a vX.Y.Z tag (or a deliberate manual run)

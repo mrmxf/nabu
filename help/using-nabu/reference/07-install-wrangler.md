@@ -51,7 +51,7 @@ what CI does.
 
   ```bash
   infisical run --env dev --path /nabu-core \
-    --projectId 9148f633-3138-434c-a7aa-9d55d72e4fbd --domain https://eu.infisical.com \
+    --projectId ee606f47-f67f-494d-9f42-5bbf49d73eb1 --domain https://eu.infisical.com \
     -- wrangler whoami
   ```
 

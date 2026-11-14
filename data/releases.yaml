@@ -2,5 +2,6 @@
 # are git tags; a vX.Y.Z tag is a prod build and publishes a GitHub release).
 #   flow: main  build: prod   a tagged release
 #   flow: BD    build: dev    a build/deploy from a branch
-- {version: "0.1.1", date: 2026-11-13, flow: main, build: prod, note: "pre-initial deploy: Infisical project nabu (/nabu-core); nabu owns no routes on mrmxf.com, the /learn menu reads /content/index.json; help pages for the Cloudflare token, secrets and wrangler; scripts/cf-token-check.sh" }
+- {version: "0.1.2", date: 2026-11-14, flow: main, build: prod, note: "pre-initial deploy, take 2: Infisical project nabu-o-agj with its own CI identities (gh-mrmxf-dev/-prod bound to mrmxf/nabu only)" }
+- {version: "0.1.1", date: 2026-11-13, flow: main, build: prod, note: "pre-initial deploy: Infisical project nabu (/nabu-core); nabu owns no routes on mrmxf.com, the /learn menu reads /content/index.json; help pages for the Cloudflare token, secrets and wrangler; scripts/cf-token-check.sh. Tag only: CI could not log in to Infisical, so no release was published" }
 - {version: "0.1.0", date: 2026-11-03, flow: main, build: prod, note: "first public release: engine split from secret-agents, library API, nabu build, media, nabu init; binaries for 6 platforms with the web app embedded, nabu-web archive, checksums" }
