@@ -41,7 +41,7 @@ func (f *fake) server(t *testing.T) *httptest.Server {
 
 func msg() *mailer.Message {
 	return &mailer.Message{
-		From:    mail.Address{Name: "PocketBase", Address: "support@example.com"},
+		From:    mail.Address{Name: "PocketBase", Address: "support@nabu.example"},
 		To:      []mail.Address{{Address: "alice@nabu.example"}},
 		Subject: "Your sign-in code",
 		HTML:    "<p>123456</p>",
@@ -86,7 +86,7 @@ func TestMailtrap(t *testing.T) {
 		t.Errorf("Authorization = %q", got)
 	}
 	from := f.body["from"].(map[string]any)
-	if from["email"] != "support@example.com" || f.body["html"] != "<p>123456</p>" {
+	if from["email"] != "support@nabu.example" || f.body["html"] != "<p>123456</p>" {
 		t.Errorf("with no configured From the message's own is kept: %v", f.body)
 	}
 }
