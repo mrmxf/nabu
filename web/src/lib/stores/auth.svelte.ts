@@ -18,6 +18,34 @@ export async function login(identity: string, password: string): Promise<void> {
 	await pb.collection('users').authWithPassword(identity, password);
 }
 
+// requestSignInCode asks Nabu to email a sign-in code (POST /api/auth/otp, see
+// nabu/internal/httpapi/otp.go). identity is a username or an email; the code
+// always goes to the email on record. The reply is an otpId whether or not the
+// account exists, so the page cannot tell — and must not say — which it was.
+export async function requestSignInCode(identity: string): Promise<string> {
+	const res = await pb.send<{ otpId: string }>('/api/auth/otp', {
+		method: 'POST',
+		body: { identity }
+	});
+	return res.otpId;
+}
+
+// loginWithCode finishes a code sign-in with PocketBase's own auth-with-otp,
+// which limits guesses and populates the auth store like any other sign-in.
+export async function loginWithCode(otpId: string, code: string): Promise<void> {
+	await pb.collection('users').authWithOTP(otpId, code);
+}
+
+// signInCodesEnabled reports whether the users collection accepts emailed codes.
+export async function signInCodesEnabled(): Promise<boolean> {
+	try {
+		const methods = await pb.collection('users').listAuthMethods();
+		return !!methods.otp?.enabled;
+	} catch {
+		return false;
+	}
+}
+
 // classroomFastLogin signs a student in by name alone via POST
 // /api/classroom/login (see nabu/internal/httpapi/classroom.go). The server
 // creates the account on first use and mints the token, returning the same

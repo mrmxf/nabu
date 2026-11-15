@@ -8,12 +8,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/mrmxf/nabu/embedfs"
 	"github.com/mrmxf/nabu/internal/content"
+	"github.com/mrmxf/nabu/internal/mail"
 	"github.com/mrmxf/nabu/internal/s3svc"
 	"github.com/mrmxf/nabu/internal/source"
 )
@@ -301,6 +303,14 @@ func checkEnv(v *validator, cfg *embedfs.Config, n needs) {
 		}
 		if cfg.Pocketbase.Backups.S3.Enabled {
 			requireEnv(v, cfg.Pocketbase.Backups.S3.PasswordEnv, "S3 backups enabled")
+		}
+		if p := cfg.Mail.Provider; p != "" {
+			if mail.Known(p) {
+				requireEnv(v, cfg.Mail.APIKeyEnv, "mail provider "+p)
+			} else {
+				v.record(sevFail, "unknown mail provider", "provider", p,
+					"fix", "set mail.provider to one of "+strings.Join(mail.Providers(), ", ")+" in nabu.yaml")
+			}
 		}
 	}
 

@@ -272,6 +272,14 @@ content types, the `_headers` CORS rule, SPA fallback for deep links, the guest
 lesson. Found M-18 (home/login hang with no server) and C-07. The naming went back
 into the `nabu init` templates. Still to do in step 1: the `mrmxf.com/learn/` menu.
 
+**Academy-lite (2026-11-15), ahead of the academy.** For a first live course before
+the academy exists: one Nabu container per course behind a Worker on its own host
+(`nabu-<course>-course`, Container Durable Object), Litestream to an R2 bucket
+`nabu-<course>-state`, student work in `nabu-<course>-work`, and sign-in by emailed
+code (`/api/auth/otp`, mail through a provider API, `internal/mail`) against an
+imported roster (Worker secret `NABU_ROSTER_CSV`). The academy later replaces the
+roster secret and the code login with its JWT; the container stays the same.
+
 1. Static `nabu build` to a preview Pages project; then switch on the
    `mrmxf.com/learn/` menu script in www-mrmxf. `nabu build` already writes the
    `_headers` rule giving `/content/index.json` `Access-Control-Allow-Origin: *`

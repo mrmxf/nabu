@@ -139,3 +139,14 @@ pocketbase:
     # explicitly (5-field). Leave empty for manual backups only.
     cron: "0 3 * * *"   # daily at 03:00
     cron_max_keep: 7    # keep the most recent N backups
+
+# Email through a provider's HTTP API (no SMTP): sign-in codes, verification and
+# password-reset mails. provider: brevo | mailtrap; empty = PocketBase's own
+# mailer (pocketbase.smtp above, else sendmail). The API key comes from the env
+# var named by api_key_env, never from this file.
+mail:
+  provider: ""
+  api_key_env: NABU_MAIL_API_KEY
+  endpoint: ""            # empty = the provider's default API URL
+  sender_name: Nabu
+  sender_address: no-reply@nabu.example

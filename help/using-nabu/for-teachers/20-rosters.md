@@ -149,6 +149,37 @@ users:
 > is created (or rotate it on a later import). When you **export** a roster, the
 > `password` column comes back empty — Nabu never writes secrets into a roster.
 
+## Signing in with an emailed code
+
+Students do not need a password at all. Leave the `password` column out, and the
+login page offers **Email me a sign-in code**: a student types their username or
+email, and Nabu emails a 6-digit code to the **email in the roster**, never to the
+typed text. The code works for 10 minutes, and a sign-in lasts 9 hours.
+
+So the roster is also the list of who may sign in. Nobody else gets a code, and the
+page looks the same either way, so it does not reveal who is on the list. The
+smallest roster for this is a CSV with two columns, plus the course:
+
+```csv
+email,name,role,courses
+sam.lee@nabu.example,Sam Lee,student,sample-lab
+```
+
+Nabu makes each username from the email (`sam-lee` here). Sending the codes needs a
+mail provider in the course's `nabu.yaml`; Nabu sends through the provider's API
+(Brevo or Mailtrap), with the API key in an environment variable:
+
+```yaml
+mail:
+  provider: brevo                 # or mailtrap
+  api_key_env: BREVO_API_KEY      # the env var holding the key, never the key
+  sender_name: Sample Lab
+  sender_address: lab@nabu.example
+```
+
+`nabu doctor` fails if the key is missing. Codes need the internet, so a classroom
+laptop with no uplink uses `nabu classroom` (name-only sign-in) instead.
+
 ## Importing a roster
 
 Only an **admin** can import a roster (it creates and changes accounts). You

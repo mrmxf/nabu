@@ -31,6 +31,10 @@ func Register(se *core.ServeEvent) {
 	// teacher turns it on for a lesson. `status` reports nothing while the flag
 	// is off; `login` signs a student in by name alone, creating their account on
 	// first use. See internal/httpapi/classroom.go for the security tradeoff.
+	// email sign-in code — PUBLIC (the caller is signed out). Takes a username or
+	// an email and mails a code to the email on record; the reply never reveals
+	// whether the account exists. See internal/httpapi/otp.go.
+	se.Router.POST("/api/auth/otp", otpRequestHandler)
 	se.Router.GET("/api/classroom/status", classroomStatusHandler)
 	se.Router.POST("/api/classroom/login", classroomLoginHandler)
 	// agent server health — readable by any signed-in student (serverstatus widget).

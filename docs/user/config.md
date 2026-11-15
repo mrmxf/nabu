@@ -110,6 +110,16 @@ variables (injected by Infisical) that hold the SMTP password and S3 secret key.
 `nabu admin validate` checks those env vars are present when the feature is
 enabled.
 
+**Mail through a provider API.** The top-level `mail:` block (not part of
+`pocketbase:`) sends every email PocketBase would send (sign-in codes,
+verification, password resets) through a provider's HTTP API instead of SMTP:
+`provider` is `brevo` or `mailtrap` (`internal/mail`; add one there),
+`api_key_env` names the env var holding the key, `endpoint` overrides the API URL,
+and `sender_name`/`sender_address` are the From of every message. An empty
+`provider` leaves PocketBase's own mailer in charge. `nabu admin validate` fails
+when the provider is unknown or its key is missing; `nabu serve` logs which way
+mail goes. The sign-in email names `app.name`, so apply settings once.
+
 `settings apply` is **declarative**: it makes PocketBase match the config exactly,
 so the shipped placeholder values must be edited to your real settings before
 applying in production — always `--dry-run` first. It does not create the

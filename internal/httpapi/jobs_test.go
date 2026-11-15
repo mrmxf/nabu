@@ -5,7 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	// side-effect: registers the Secret Agents migrations so a fresh test app
+	// side-effect: registers Nabu's migrations so a fresh test app
 	// bootstraps the full schema (courses/lessons/sessions/groups/...).
 	_ "github.com/mrmxf/nabu/migrations"
 )

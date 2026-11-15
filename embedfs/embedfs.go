@@ -80,6 +80,23 @@ type Config struct {
 	AI                 AIConfig         `koanf:"ai"`
 	Admin              AdminConfig      `koanf:"admin"`
 	Pocketbase         PocketbaseConfig `koanf:"pocketbase"`
+	Mail               MailConfig       `koanf:"mail"`
+}
+
+// MailConfig is mail.* — how Nabu sends email (sign-in codes, verification,
+// password resets) through a provider's HTTP API instead of SMTP. An empty
+// Provider leaves PocketBase's own mailer (pocketbase.smtp, else sendmail) in
+// charge. The API key is never stored; APIKeyEnv names the env var holding it.
+type MailConfig struct {
+	// Provider is one of the internal/mail providers: brevo or mailtrap.
+	Provider string `koanf:"provider"`
+	// APIKeyEnv names the env var holding the provider's API key.
+	APIKeyEnv string `koanf:"api_key_env"`
+	// Endpoint overrides the provider's API URL (tests, sandboxes, regions).
+	Endpoint string `koanf:"endpoint"`
+	// SenderName and SenderAddress are the From of every message.
+	SenderName    string `koanf:"sender_name"`
+	SenderAddress string `koanf:"sender_address"`
 }
 
 // CourseConfig is the course.* subtree — where a course keeps its files. Every

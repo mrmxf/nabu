@@ -125,6 +125,11 @@ func upsertUser(app core.App, col *core.Collection, rec UserRecord) (*core.Recor
 	}
 	if pw := resolvePassword(rec); pw != "" {
 		user.SetPassword(pw)
+	} else if created {
+		// No password in the roster: the student signs in with an emailed code
+		// (or classroom fast login). PocketBase still requires a password, so
+		// set a random one nobody knows.
+		user.SetRandomPassword()
 	}
 	if err := app.Save(user); err != nil {
 		return nil, false, fmt.Errorf("save user: %w", err)

@@ -50,6 +50,7 @@ import (
 	"github.com/mrmxf/nabu/internal/deploy"
 	"github.com/mrmxf/nabu/internal/hooks"
 	"github.com/mrmxf/nabu/internal/httpapi"
+	"github.com/mrmxf/nabu/internal/mail"
 	"github.com/mrmxf/nabu/internal/scaffold"
 	"github.com/mrmxf/nabu/internal/seed"
 	"github.com/mrmxf/nabu/internal/serverctl"
@@ -197,6 +198,9 @@ func New(opts Options) *App {
 	hooks.BindActivity(pb)
 	hooks.BindSessionActivity(pb)
 	hooks.BindNabuInfo(pb)
+	// send PocketBase's mail (sign-in codes, verification, resets) through the
+	// provider API named by mail.provider, when one is set.
+	mail.Bind(pb)
 
 	pb.OnServe().BindFunc(app.onServe)
 
@@ -233,6 +237,7 @@ func (a *App) onServe(se *core.ServeEvent) error {
 		slog.Warn("could not write pid file", "err", err)
 	}
 	httpapi.Register(se)
+	mail.Report()
 	// fail jobs left queued/running by a previous process so they don't hold
 	// their group's quota forever, then start the periodic stuck-job sweeper.
 	httpapi.ReconcileOrphanJobs(se.App)

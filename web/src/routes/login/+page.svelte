@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { login, classroomFastLogin, auth } from '$lib/stores/auth.svelte';
+	import {
+		login,
+		classroomFastLogin,
+		auth,
+		requestSignInCode,
+		loginWithCode,
+		signInCodesEnabled
+	} from '$lib/stores/auth.svelte';
 	import {
 		loadClassroomStatus,
 		setClassroomSessionId,
@@ -42,6 +49,16 @@
 	// the staff toggle flips it and it never flips back on its own.
 	let fastMode = $state(false);
 
+	// Email sign-in codes (users collection otp). When on, the sign-in form leads
+	// with "Email me a code"; a password stays one click away for staff.
+	let codesEnabled = $state(false);
+	let usePassword = $state(false);
+	let otpId = $state('');
+	let code = $state('');
+	let codeSentTo = $state('');
+	// The code form is on screen: codes are on and the password form is not chosen.
+	let codeMode = $derived(codesEnabled && !usePassword);
+
 	// The Session a fast login would join: the picked one, else the only one.
 	let pickedSession = $derived(
 		classroomSessions.find((s) => s.id === classroomSessionId) ?? classroomSessions[0] ?? null
@@ -57,7 +74,7 @@
 		}
 		// find out whether this is a demo deployment (before prefilling demo creds)
 		// and whether a classroom fast login is on offer.
-		const [demo, classroom] = await Promise.all([
+		const [demo, classroom, codes] = await Promise.all([
 			pb
 				.send<{
 					demo_mode: boolean;
@@ -65,8 +82,10 @@
 					logins?: { email?: string; uid?: string; password: string }[];
 				}>('/api/demo/status', { method: 'GET' })
 				.catch(() => null),
-			loadClassroomStatus(true)
+			loadClassroomStatus(true),
+			signInCodesEnabled()
 		]);
+		codesEnabled = codes;
 		if (demo) {
 			demoMode = demo.demo_mode;
 			leftoverDemo = demo.demo_mode ? [] : (demo.present ?? []);
@@ -104,6 +123,54 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	// Step 1 of a code sign-in: email a code to the account's address on record.
+	async function sendCode(e?: SubmitEvent) {
+		e?.preventDefault();
+		error = '';
+		identity = identity.trim();
+		if (!identity) return;
+		busy = true;
+		try {
+			otpId = await requestSignInCode(identity);
+			codeSentTo = identity;
+			code = '';
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Could not send a code';
+		} finally {
+			busy = false;
+		}
+	}
+
+	// Step 2: sign in with the emailed code.
+	async function submitCode(e: SubmitEvent) {
+		e.preventDefault();
+		error = '';
+		busy = true;
+		try {
+			await loginWithCode(otpId, code.replace(/\s+/g, ''));
+			try {
+				localStorage.setItem(LAST_IDENTITY_KEY, codeSentTo);
+			} catch {
+				/* storage may be blocked (private mode); remembering is best-effort */
+			}
+			goto('/');
+		} catch (err) {
+			error =
+				err instanceof Error && /too many/i.test(err.message)
+					? 'Too many tries. Ask for a new code in a few minutes.'
+					: 'That code did not work. Check it, or ask for a new one.';
+		} finally {
+			busy = false;
+		}
+	}
+
+	// Back to step 1, to fix the name or ask again.
+	function restartCode() {
+		otpId = '';
+		code = '';
+		error = '';
 	}
 
 	async function submit(e: SubmitEvent) {
@@ -199,34 +266,99 @@
 			<p class="muted">Use a seeded demo account to explore the course.</p>
 		{/if}
 
-		<form onsubmit={submit}>
-			<label for="identity">Username or email</label>
-			<!-- type=text, not email: a username (e.g. s7g1-alice) is a valid identity too. -->
-			<input
-				id="identity"
-				type="text"
-				bind:value={identity}
-				autocomplete="username"
-				autocapitalize="none"
-				autocorrect="off"
-				spellcheck="false"
-				required
-			/>
+		{#if codeMode && otpId}
+			<form onsubmit={submitCode}>
+				<p>
+					If <strong>{codeSentTo}</strong> has an account here, we have emailed a 6-digit code to
+					its email address. It works for 10 minutes.
+				</p>
+				<label for="code">Code from the email</label>
+				<input
+					id="code"
+					type="text"
+					inputmode="numeric"
+					autocomplete="one-time-code"
+					maxlength="8"
+					bind:value={code}
+					required
+				/>
+				{#if error}
+					<p class="error">{error}</p>
+				{/if}
+				<button type="submit" disabled={busy || !code.trim()}>
+					{busy ? 'Signing in…' : 'Sign in'}
+				</button>
+			</form>
+			<p class="muted staff-link">
+				No email?
+				<button type="button" class="pseudo" disabled={busy} onclick={() => sendCode()}>
+					Send another code
+				</button>
+				<button type="button" class="pseudo" onclick={restartCode}>Use a different name</button>
+			</p>
+		{:else if codeMode}
+			<form onsubmit={sendCode}>
+				<label for="identity">Username or email</label>
+				<input
+					id="identity"
+					type="text"
+					bind:value={identity}
+					autocomplete="username"
+					autocapitalize="none"
+					autocorrect="off"
+					spellcheck="false"
+					required
+				/>
+				{#if error}
+					<p class="error">{error}</p>
+				{/if}
+				<button type="submit" disabled={busy || !identity.trim()}>
+					{busy ? 'Sending…' : 'Email me a sign-in code'}
+				</button>
+			</form>
+			<p class="muted staff-link">
+				Have a password?
+				<button type="button" class="pseudo" onclick={() => ((usePassword = true), (error = ''))}>
+					Sign in with a password
+				</button>
+			</p>
+		{:else}
+			<form onsubmit={submit}>
+				<label for="identity">Username or email</label>
+				<!-- type=text, not email: a username (e.g. s7g1-alice) is a valid identity too. -->
+				<input
+					id="identity"
+					type="text"
+					bind:value={identity}
+					autocomplete="username"
+					autocapitalize="none"
+					autocorrect="off"
+					spellcheck="false"
+					required
+				/>
 
-			<label for="password">Password</label>
-			<PasswordInput
-				id="password"
-				bind:value={password}
-				autocomplete="current-password"
-				required
-			/>
+				<label for="password">Password</label>
+				<PasswordInput
+					id="password"
+					bind:value={password}
+					autocomplete="current-password"
+					required
+				/>
 
-			{#if error}
-				<p class="error">{error}</p>
+				{#if error}
+					<p class="error">{error}</p>
+				{/if}
+
+				<button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+			</form>
+			{#if codesEnabled}
+				<p class="muted staff-link">
+					<button type="button" class="pseudo" onclick={() => ((usePassword = false), (error = ''))}>
+						Email me a sign-in code instead
+					</button>
+				</p>
 			{/if}
-
-			<button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-		</form>
+		{/if}
 
 		<p class="muted signup-link">New here? <a href="/signup">Create an account</a>.</p>
 
