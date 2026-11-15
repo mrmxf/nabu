@@ -44,6 +44,9 @@ ci:
     #   dev:  {branches: [main]}     # push main  -> the staging project
     #   prod: {tags: ["v*"]}         # tag vX.Y.Z -> the live project
 
+  # Create the two Pages projects once, before the first deploy:
+  #   wrangler pages project create nabu-{{.Course}}-staging --production-branch main
+  #   wrangler pages project create nabu-{{.Course}} --production-branch main
   # targets:
   #   pages:
   #     kind: cloudflare-pages
@@ -51,20 +54,22 @@ ci:
   #     require: [CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID]   # from Infisical
   #     dev:
   #       dir: "_clog_build/public"
-  #       project: "{{.Course}}-staging"
+  #       project: "nabu-{{.Course}}-staging"
   #       production-branch: "main"
   #     prod:
   #       dir: "_clog_build/public"
-  #       project: "{{.Course}}"
+  #       project: "nabu-{{.Course}}"
   #       production-branch: "main"
 
   # Secrets live in Infisical, never in the repo or the CI settings. A half-filled
   # block is an error, so uncomment it whole. Set-up: clog CI --config-help;
-  # check the identities with: clog CI oidc
+  # check the identities with: clog CI oidc. Each identity's subject names this
+  # repo by its exact ids (gh api repos/<owner>/<repo>/actions/oidc/customization/sub);
+  # clog CI oidc rejects a wildcard in the repo part.
   # infisical:
   #   domain: "https://eu.infisical.com"
   #   project-id: "<uuid>"
-  #   path: "/{{.Course}}"
+  #   path: "/course-{{.Course}}"
   #   env: {dev: dev, prod: prod}
   #   identity:
   #     github: {dev-uuid: "<uuid>", prod-uuid: "<uuid>"}

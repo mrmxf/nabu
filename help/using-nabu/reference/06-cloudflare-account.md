@@ -43,8 +43,11 @@ They live in **one Infisical folder per repository**. For the nabu repo:
 | Folder | `/nabu-core` |
 | Environments | `dev` and `prod`. Until prod exists they hold the same values. |
 
-A course repo gets its own folder in the same way, and names it in its `.clog.yaml`
-`ci.infisical` block.
+A course gets its own folder in the same project, named `/course-<slug>` (for
+example `/course-sample-lab`), holding the same two Cloudflare values. It names the
+folder in its `.clog.yaml` `ci.infisical` block. Its Pages projects are
+`nabu-<slug>-staging` and `nabu-<slug>`; create them once with
+`wrangler pages project create`.
 
 Secrets the running server needs (the agent worker token, the superuser password)
 are listed in [docs/secrets.md][secrets]. The academy's keys arrive with the academy.
@@ -62,7 +65,11 @@ gh api repos/<owner>/<repo>/actions/oidc/customization/sub
   Use the `sub_claim_prefix` it prints: `<prefix>:ref:refs/{tags/v*,heads/main}`.
 - otherwise: `repo:<owner>/<repo>:ref:refs/{tags/v*,heads/main}`.
 
-A brace list needs a comma: `{nabu}` on its own matches the literal text `{nabu}`.
+One identity can serve several repos with a brace list of exact ids, for example
+`repo:mrmxf@19326048/{nabu@1444420835,sample-lab@<id>}:ref:refs/heads/main`.
+Do not use `*` in place of an id: `clog CI oidc` rejects it, because it would also
+match a deleted repo re-created under the same name. A brace list needs a comma:
+`{nabu}` on its own matches the literal text `{nabu}`. Check with `clog CI oidc`.
 A mismatch shows in CI as `HTTP 403: Access denied: OIDC subject not allowed`.
 
 ## 1. Create the API token

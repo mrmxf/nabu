@@ -10,6 +10,8 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/pocketbase/pocketbase/core"
+
 	"github.com/mrmxf/nabu/internal/agentsvc"
 	"github.com/mrmxf/nabu/internal/classroom"
 )
@@ -163,5 +165,24 @@ func TestRunDoctorRejectsUnknownMode(t *testing.T) {
 	err := runDoctor(t.Context(), nil, Env{}, doctorOpts{mode: "mainframe"})
 	if err == nil || !strings.Contains(err.Error(), "unknown --mode") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+// A static deployment (doctor --mode saas) has no server: no web app to serve
+// from pb_public and nothing to fail on.
+func TestCheckDBPathsStatic(t *testing.T) {
+	capture(t)
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()})
+
+	v := &validator{}
+	checkDBPaths(v, app, nil, true)
+	if v.failed() {
+		t.Fatal("static: a missing pb_public must not fail")
+	}
+
+	v = &validator{}
+	checkDBPaths(v, app, nil, false)
+	if !v.failed() {
+		t.Fatal("server: no web app anywhere must fail")
 	}
 }

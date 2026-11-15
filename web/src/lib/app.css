@@ -4,7 +4,7 @@
 :root {
 	--nabu-font-heading: 'Raleway', system-ui, -apple-system, 'Segoe UI', Roboto,
 		Helvetica, Arial, sans-serif;
-	--nabu-font-body: 'KoHo', system-ui, -apple-system, 'Segoe UI', Roboto,
+	--nabu-font-body: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto,
 		Helvetica, Arial, sans-serif;
 	--nabu-font-mono: 'Ubuntu Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
 		'Liberation Mono', monospace;

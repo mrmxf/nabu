@@ -87,7 +87,7 @@ func runDoctor(ctx context.Context, app core.App, env Env, o doctorOpts) error {
 	if err != nil {
 		return err
 	}
-	courses := runChecks(ctx, app, v, checkOpts{deep: o.deep, content: tree, web: env.Web})
+	courses := runChecks(ctx, app, v, checkOpts{deep: o.deep, content: tree, web: env.Web, static: o.mode == ModeSaaS})
 	n := deriveNeeds(courses)
 	switch o.mode {
 	case ModeSaaS:

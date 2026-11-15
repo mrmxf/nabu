@@ -92,15 +92,22 @@ type checkOpts struct {
 	// web is the built web app the binary serves (Options.Public or the
 	// webembed copy); nil means pb_public/ on disk only.
 	web fs.FS
+	// static is a deployment with no Nabu server (the SaaS static tier), so
+	// there is no database that needs a superuser.
+	static bool
 }
 
 // runChecks executes every readiness check in fast-fail order. It does not stop
 // on the first failure — it runs them all so one pass surfaces every fixable
 // problem — but any FAIL makes failed() true.
 func runChecks(ctx context.Context, app core.App, v *validator, opt checkOpts) []content.Course {
-	cfg := checkConfig(v)                   // 1 · embedded config parses
-	checkDBPaths(v, app, opt.web)           // 2 · pb_data writeable, a web app to serve
-	checkSuperuser(v, app, cfg)             // 3 · a superuser exists or is configured
+	cfg := checkConfig(v)                     // 1 · embedded config parses
+	checkDBPaths(v, app, opt.web, opt.static) // 2 · pb_data writeable, a web app to serve
+	if opt.static {
+		v.record(sevPass, "no superuser needed", "detail", "static site: no Nabu server")
+	} else {
+		checkSuperuser(v, app, cfg) // 3 · a superuser exists or is configured
+	}
 	courses := checkContent(v, opt.content) // 4 · content parses + declares needs
 	n := deriveNeeds(courses)
 	checkEnv(v, cfg, n)          // 5 · env vars present for the discovered needs
@@ -154,12 +161,18 @@ func checkConfig(v *validator) *embedfs.Config {
 	return cfg
 }
 
-func checkDBPaths(v *validator, app core.App, web fs.FS) {
+// checkDBPaths needs a writeable pb_data and, unless the deployment is static
+// (the web app then ships in the static build), a web app to serve.
+func checkDBPaths(v *validator, app core.App, web fs.FS, static bool) {
 	dataDir := app.DataDir()
 	if err := probeWriteable(dataDir); err != nil {
 		v.record(sevFail, "pb_data writeable", "dir", dataDir, "err", err)
 	} else {
 		v.record(sevPass, "pb_data writeable", "dir", dataDir)
+	}
+	if static {
+		v.record(sevPass, "web app ships in the static build")
+		return
 	}
 	if hasIndex(web) {
 		v.record(sevPass, "web app built in")

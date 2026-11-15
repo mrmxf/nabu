@@ -264,11 +264,13 @@ The resume pointer comes only from the course outbox; the Worker never writes it
 
 ### Near term (2026-11-14)
 
-**Postponed to 2026-11-16 (logistics).** Step 1 starts there, and it is also the
-first real test of a `nabu init` course on Cloudflare: move nabu-tutorial onto the
-`nabu init` clog files, fill in a `cloudflare-pages` target and the Infisical block,
-switch deploy on, and check the `_headers` CORS rule from the live site. Feed what it
-finds back into the `nabu init` templates.
+**Step 1 (static) done 2026-11-15** with a fresh `nabu init` course, fvp-portfolio
+(nabu-tutorial does not exist yet): Pages projects `nabu-<course>-staging` (push to
+main) and `nabu-<course>` (v* tag), secrets from Infisical folder `/course-<course>`
+in project nabu, CI logging in by OIDC with exact-id subjects. Verified live: JSON
+content types, the `_headers` CORS rule, SPA fallback for deep links, the guest
+lesson. Found M-18 (home/login hang with no server) and C-07. The naming went back
+into the `nabu init` templates. Still to do in step 1: the `mrmxf.com/learn/` menu.
 
 1. Static `nabu build` to a preview Pages project; then switch on the
    `mrmxf.com/learn/` menu script in www-mrmxf. `nabu build` already writes the
