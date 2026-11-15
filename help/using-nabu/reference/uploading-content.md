@@ -106,7 +106,7 @@ there:
 title: "…"
 params:
   bucket: my-lesson-bucket      # the storage bucket for this lesson
-  prefix: rise-summer/my-lesson # optional key prefix inside the bucket
+  prefix: sample-lab/my-lesson # optional key prefix inside the bucket
 ---
 ```
 

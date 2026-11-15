@@ -4,7 +4,7 @@
 Cloudflare, or the interactive classroom on a laptop (see [claude-deploy.md][deploy]).
 
 **Status:** moved here on 2026-11-14 from the original split plan (section 4b, decided
-2026-11-03). U1–U3 are done, U9 and the `nabu web fetch` / `nabu init` clog templates are done, and U4–U8 and the nabu-side commands are open. How nabu
+2026-11-03). U1–U3 are done, U9, `nabu web fetch`, the `nabu init` clog templates, `nabu classroom` and `nabu doctor` are done, and U4–U8 and `nabu media check` are open. How nabu
 builds and releases today is in [claude-build.md][build].
 
 ## Decision
@@ -61,13 +61,15 @@ v1.3.5 on 2026-11-14:
 
 ## nabu-side additions
 
-Course-aware, so they belong in nabu, not util. All open.
+Course-aware, so they belong in nabu, not util.
 
-- **`nabu classroom`** (classroom): binds `0.0.0.0`, turns on classroom fast login for
+- ~~**`nabu classroom`**~~ (**done 2026-11-15**, `internal/classroom`; `--export` writes the
+  roster on exit, `nabu init` adds an always-open practice Session) (classroom): binds `0.0.0.0`, turns on classroom fast login for
   the session, and prints the LAN URLs plus a QR code for students. It warns if any
   agent job lacks `sim_output_fallback` while no worker is reachable, and offers
   `users export` on exit. It is the target of U8's `start-classroom` script.
-- **`nabu doctor [--mode saas|classroom|selfhost]`** (both): `admin validate` plus
+- ~~**`nabu doctor [--mode saas|classroom|selfhost]`**~~ (**done 2026-11-15**,
+  `internal/admin/doctor.go`; selfhost takes `--image` until an image is published) (both): `admin validate` plus
   readiness checks per mode, silent when ready:
   - **SaaS:** static build present, Cloudflare token, media bucket reachable, worker on
     https with a token.
@@ -88,7 +90,7 @@ Course-aware, so they belong in nabu, not util. All open.
 1. ~~U1, U2, U3, then nabu's own `.clog.yaml` release~~ (done: `v0.1.0`, `v0.1.2`).
 2. ~~`nabu web fetch`~~ (done 2026-11-14).
 3. ~~The `nabu init` clog templates~~ (done 2026-11-14); reusable course workflows still open.
-4. U8 + `nabu classroom` + `nabu doctor`.
+4. U8, then ~~`nabu classroom` + `nabu doctor`~~ (done 2026-11-15).
 5. U4 and U5, then U6 and U7 alongside the SaaS build steps in [plan-saas.md][saas].
 6. ~~U9~~ (clog v1.3.5, 2026-11-14).
 

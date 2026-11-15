@@ -3,10 +3,16 @@
 A course for [Nabu](https://github.com/mrmxf/nabu).
 
 ```bash
+nabu doctor    # silent when this folder is ready; otherwise says what to fix
 nabu seed      # load content/ into pb_data (run from this folder)
 nabu serve     # http://127.0.0.1:8090
 nabu build     # static site in dist/ (guest lessons work with no server)
 ```
+
+To teach a live lesson from this laptop, run `nabu classroom`. It seeds the
+course, signs students in by name only, and prints the address and a QR code for
+the room. `content/lesson-schedules.yaml` holds the Session they join. Check the
+laptop first with `nabu doctor --mode classroom`.
 
 Content lives in `content/{{.Course}}/`. The full authoring guide is the
 [nabu-tutorial](https://github.com/mrmxf/nabu-tutorial) course.

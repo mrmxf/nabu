@@ -8,6 +8,7 @@ package admin
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -16,12 +17,23 @@ import (
 
 	"github.com/mrmxf/nabu/embedfs"
 	"github.com/mrmxf/nabu/internal/s3svc"
+	"github.com/mrmxf/nabu/internal/seed"
 	"github.com/mrmxf/nabu/internal/students"
 )
 
+// Env is what the readiness checks read besides the database: the course trees
+// the binary was built with and the web app it serves.
+type Env struct {
+	// Sources are the embedded course trees (Options.Content and friends).
+	Sources seed.Sources
+	// Web is the built web app (Options.Public, or the webembed copy); nil
+	// means pb_public/ on disk only.
+	Web fs.FS
+}
+
 // NewCommand returns the `admin` command tree. Running `admin` on its own prints
 // help rather than doing anything — every real action is a named subcommand.
-func NewCommand(app core.App) *cobra.Command {
+func NewCommand(app core.App, env Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "admin",
 		Short: "Grouped administrative operations (kept off the top level to avoid accidents)",
@@ -37,7 +49,7 @@ func NewCommand(app core.App) *cobra.Command {
 	// flat verbs sharing one contract (see newValidateCommand). backup/restore
 	// constructors stay in internal/students so they can reuse its helpers.
 	cmd.AddCommand(
-		newValidateCommand(app),
+		newValidateCommand(app, env),
 		newSettingsCommand(app),
 		newShowConfigCommand(),
 		newS3Command(app),

@@ -21,7 +21,10 @@ to build a Nabu course by building one, lives in [nabu-tutorial][tutorial].
   the room's Wi-Fi. No internet needed, and the data stays in the room.
 
 Both run the same release. Container and Cloudflare deployment are still being built;
-today Nabu runs as a single binary.
+today Nabu runs as a single binary. `nabu classroom` runs a live lesson from a laptop,
+and `nabu doctor --mode classroom|saas|selfhost` checks a machine is ready (it is
+silent when it is). The [quickstart](help/using-nabu/getting-started/) walks through
+both.
 
 ## Install
 

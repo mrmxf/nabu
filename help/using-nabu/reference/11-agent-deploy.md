@@ -10,9 +10,8 @@ params:
     agents behaving as configured. Each step has a pass gate — don't proceed until
     it's green.
 ---
-This is the **bring-up runbook**: the exact sequence to start Secret Agents and
-prove each layer before trusting the next. It's written for the operator (Bruce
-today, the ops team later). The rule is **gates** — every step ends with a pass
+This is the **bring-up runbook**: the exact sequence to start Nabu with its agents
+and prove each layer before trusting the next. It's written for the operator. The rule is **gates** — every step ends with a pass
 condition; a red gate stops you here and points at
 [troubleshooting](help:reference#troubleshooting-agents). For the architecture behind it,
 see [agent fundamentals](help:reference#agent-fundamentals).
@@ -202,16 +201,13 @@ laptop (`arm64`). Build on the target where you can; otherwise cross-compile.
 **Do** — on the target box:
 
 ```bash
-./nabu/scripts/build.sh          # builds the web SPA -> pb_public, then the Go binary
-./nabu/nabu serve                # http://127.0.0.1:8090   (./nabu/nabu stop to halt)
+./scripts/build.sh          # builds the web SPA -> pb_public, then the Go binary
+nabu serve                # http://127.0.0.1:8090   (nabu stop to halt)
 ```
 
-Cross-compiling the binary for an ARM host from x86 (SPA must already be built
-into `pb_public`):
-
-```bash
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o nabu/nabu ./nabu
-```
+Or skip the build: the [release](https://github.com/mrmxf/nabu/releases/latest)
+has a binary for each platform (`nabu-arm-lnx` for an ARM host) with the web app
+built in.
 
 Schema **migrations apply automatically** on first serve.
 
@@ -232,11 +228,12 @@ serve log shows "server started" with no migration errors.
 **Do:**
 
 ```bash
-go run ./nabu seed               # idempotent: demo users + showcase content (+ superuser if NABU_SUPERUSER_PW set)
+nabu seed               # idempotent: content, demo users if demo_mode is on (+ superuser if NABU_SUPERUSER_PW set)
 ```
 
-This creates the demo users (`alice/ben/cara @rise.demo` students, `tom@nabu.example`
-teacher, `ada@nabu.example` admin — all password `secret1234`), loads the
+With `demo_mode: true` in `nabu.yaml` this creates the demo users (students
+`alice`, `ben` and `cara`, teacher `tom` and admin `ada`, all `@nabu.example` with
+password `secret1234`). It always loads the
 courses/lessons/slides from the `content/` and help trees, and — when
 `NABU_SUPERUSER_PW` is set — the dashboard superuser (`admin@nabu.example`).
 
@@ -246,11 +243,11 @@ courses/lessons/slides from the `content/` and help trees, and — when
 curl -s http://127.0.0.1:8090/api/collections/users/auth-with-password \
   -H 'Content-Type: application/json' \
   -d '{"identity":"alice@nabu.example","password":"secret1234"}' | grep -q '"token"' && echo LOGIN_OK
-curl -s "http://127.0.0.1:8090/api/collections/courses/records" | grep -q 'rise-summer' && echo CONTENT_OK
+curl -s "http://127.0.0.1:8090/api/collections/courses/records" | grep -q '"slug"' && echo CONTENT_OK
 ```
 
 Or in the browser: log in as `alice@nabu.example`, and the course → lesson picker shows
-the Secret Agents lesson.
+your course's lessons.
 
 **Gate:** a seeded user logs in and the showcase course/lesson is visible.
 
@@ -315,7 +312,7 @@ node dist/index.js
 #
 export WORKER_HEALTH_URL="http://$HOSTni6/healthz"
 export WORKER_DISPATCH_TOKEN="$LOCAL_TOKEN"
-./nabu/nabu serve
+nabu serve
 ```
 
 **Prove:**
@@ -478,23 +475,23 @@ and the guardrails fire.
 
 **Do / Prove:**
 
-- **Presence** — `/healthz` advertises every expected unit. For ni6 that is
-  `web_search, hunter, hattie, pixie, pip, orca, buzz`:
+- **Presence** — `/healthz` advertises every agent key your course's content uses
+  (each job's `agent:`), e.g. `web_search, search, writer, image`:
 
   ```bash
   curl -s http://127.0.0.1:8090/api/agent/health -H "Authorization: $ATOK" \
     | grep -o '"agents":\[[^]]*\]'
   ```
 
-- **Each agent runs** — in the browser, open the "hunter" configure slide and press
-  **Run**: it goes queued → running → done and returns a hunter-shaped result
-  (research bullets with sources). With a real model (`NABU_AGENT_MODEL` pulled, Ollama
+- **Each agent runs** — in the browser, open an agent slide and press **Run**: it
+  goes queued → running → done and returns the shape of result that agent's slide
+  describes. With a real model (`NABU_AGENT_MODEL` pulled, Ollama
   up) there is **no** "offline sample" note; in fallback there is — confirm you're
   in the mode you expect.
 
-- **Controllers run their topology** — dispatch `pip`, `orca`, `buzz` and confirm the
-  output composes hunter · hattie · pixie (buzz runs the first two in parallel,
-  pip strictly in sequence). This is the "configured as designed" check.
+- **Controllers run their topology** — dispatch each controller agent your course
+  defines and confirm its output composes the agents it controls, in parallel or
+  in sequence as authored. This is the "configured as designed" check.
 
 - **Model is the pinned one** — the ni6 start log prints `model config … model=…`;
   confirm it matches your intended `NABU_AGENT_MODEL`.

@@ -40,7 +40,7 @@ disagree, this page wins.
 ```mermaid
 flowchart TD
     subgraph authoring["Authoring — internal/content"]
-        SC["{{< LMS t=&quot;agent&quot; id=&quot;hunter&quot; &gt;}}<br/>+ t_agent frontmatter"] --> W
+        SC["{{< LMS t=&quot;agent&quot; id=&quot;search&quot; &gt;}}<br/>+ t_agent frontmatter"] --> W
     end
 
     subgraph client["Browser — web/src/lib/lms"]
@@ -72,16 +72,16 @@ flowchart TD
 
 An agent job is placed in a slide body by an inline widget and configured in
 frontmatter, mirroring the `choice` widget. Catalogue:
-[`nabu-widget-catalogue.yaml`](../../../internal/content/nabu-widget-catalogue.yaml); Go model:
-[`model.go`](../../../internal/content/model.go) (`AgentJob`); parsing:
-[`parse.go`](../../../internal/content/parse.go).
+[`nabu-widget-catalogue.yaml`](https://github.com/mrmxf/nabu/blob/main/internal/content/nabu-widget-catalogue.yaml); Go model:
+[`model.go`](https://github.com/mrmxf/nabu/blob/main/internal/content/model.go) (`AgentJob`); parsing:
+[`parse.go`](https://github.com/mrmxf/nabu/blob/main/internal/content/parse.go).
 
 ```yaml
 params:
   t_agent:
-    - id: hunter               # shortcode ref + work_state key + job step name
+    - id: search               # shortcode ref + work_state key + job step name
       agent: web_search        # the worker-advertised tool to run
-      title: "Run hunter"
+      title: "Run the search"
       timeout: "60s"
       sim_output_fallback: true # show the slide's sim_output if the worker is offline
       inputs:                  # payload sent to the worker; {{choice:ID}} / {{field:ID}}
@@ -90,13 +90,13 @@ params:
 ```
 
 ```text
-{{< LMS t="agent" id="hunter" >}}        # dispatches the job here
+{{< LMS t="agent" id="search" >}}        # dispatches the job here
 {{< LMS t="serverstatus" >}}             # health + the student's group tag
 ```
 
-### 2. nabu HTTP surface — [`routes.go`](../../../internal/httpapi/routes.go)
+### 2. nabu HTTP surface — [`routes.go`](https://github.com/mrmxf/nabu/blob/main/internal/httpapi/routes.go)
 
-- **`POST /api/job/submit`** — [`jobs.go`](../../../internal/httpapi/jobs.go). Auth
+- **`POST /api/job/submit`** — [`jobs.go`](https://github.com/mrmxf/nabu/blob/main/internal/httpapi/jobs.go). Auth
   required. Body: `{ session_id, slide, agent_id, agent, inputs, timeout }`.
   - `200 { job: { id, status, queue_pos } }` on accept.
   - `503 { error: "server_unreachable" }` — worker health is red.
@@ -104,12 +104,12 @@ params:
   - `429 { error: "queue_full", group_active, group_max }` — per-group cap hit.
   - `423 { error: "submissions_paused" }` — group paused.
   - `403 / 404` — session not the caller's / not found.
-- **`GET /api/agent/health`** — [`agent.go`](../../../internal/httpapi/agent.go). Auth
+- **`GET /api/agent/health`** — [`agent.go`](https://github.com/mrmxf/nabu/blob/main/internal/httpapi/agent.go). Auth
   required. Returns nabu's cached view of the worker (always `200`; an offline
   worker is `alive:false`, not an error):
   `{ alive, uptime_s, version, capacity, running, queue_depth, agents[], reason, checked_at }`.
 
-### 3. Worker HTTP surface — [`worker/main.go`](../../../cmd/nabu-worker/main.go)
+### 3. Worker HTTP surface — [`worker/main.go`](https://github.com/mrmxf/nabu/blob/main/cmd/nabu-worker/main.go)
 
 Tailnet-only, no public port. This is the **entire** model-facing interface.
 
@@ -123,10 +123,10 @@ Tailnet-only, no public port. This is the **entire** model-facing interface.
   `/v1/jobs/:id/{complete,fail,log}` — is reserved for long jobs and not built yet.)
 
 The Go types for the dispatch contract live in
-[`agentsvc.go`](../../../internal/agentsvc/agentsvc.go) (`DispatchRequest`,
+[`agentsvc.go`](https://github.com/mrmxf/nabu/blob/main/internal/agentsvc/agentsvc.go) (`DispatchRequest`,
 `DispatchResult`) — this is the seam a Bedrock backend implements.
 
-### 4. Data model — [`1751000006_agent_jobs.go`](../../../migrations/1751000006_agent_jobs.go)
+### 4. Data model — [`1751000006_agent_jobs.go`](https://github.com/mrmxf/nabu/blob/main/migrations/1751000006_agent_jobs.go)
 
 nabu owns all of it; students only ever *read* their own rows (jobs/artifacts are
 server-written).
@@ -154,13 +154,13 @@ server-written).
 ## Step by step
 
 1. **Author** places `{{< LMS t="agent" id="…" >}}` in a slide and a `t_agent` entry
-   in frontmatter. At hydrate time [`registry.ts`](../../../web/src/lib/lms/registry.ts)
+   in frontmatter. At hydrate time [`registry.ts`](https://github.com/mrmxf/nabu/blob/main/web/src/lib/lms/registry.ts)
    resolves the id to the config and mounts
-   [`LmsAgent.svelte`](../../../web/src/lib/lms/LmsAgent.svelte); the host threads in
+   [`LmsAgent.svelte`](https://github.com/mrmxf/nabu/blob/main/web/src/lib/lms/LmsAgent.svelte); the host threads in
    the session id, slide, and group tag via
-   [`Slide.svelte`](../../../web/src/lib/components/Slide.svelte).
+   [`Slide.svelte`](https://github.com/mrmxf/nabu/blob/main/web/src/lib/components/Slide.svelte).
 2. **Readiness.** The widget calls `getAgentHealth`
-   ([`health.ts`](../../../web/src/lib/lms/health.ts)); if the worker is down or the
+   ([`health.ts`](https://github.com/mrmxf/nabu/blob/main/web/src/lib/lms/health.ts)); if the worker is down or the
    agent isn't advertised, it shows the offline state (and the sample, if
    `sim_output_fallback`). `serverstatus` shows the same health plus the group tag.
 3. **Submit.** Run → `POST /api/job/submit`. `jobSubmitHandler` checks auth, worker
@@ -173,7 +173,7 @@ server-written).
    context): sets `status=running`, then `Prober.Dispatch` POSTs the worker's
    `/v1/jobs/dispatch`.
 6. **Run.** The worker's `runAgent`
-   ([`worker/main.go`](../../../cmd/nabu-worker/main.go)) produces the
+   ([`worker/main.go`](https://github.com/mrmxf/nabu/blob/main/cmd/nabu-worker/main.go)) produces the
    result and returns `{ result_html }`. (Today canned-but-realistic; this is the
    only function a real model replaces.)
 7. **Complete.** nabu writes `status=done` + `result_html` (or `failed` + `error`)
@@ -187,7 +187,7 @@ server-written).
 Adding an agent is deliberately small — it does **not** touch nabu:
 
 1. **Advertise it** in the worker's `agents` list and add a branch to `runAgent`
-   ([`worker/main.go`](../../../cmd/nabu-worker/main.go)). The name you add
+   ([`worker/main.go`](https://github.com/mrmxf/nabu/blob/main/cmd/nabu-worker/main.go)). The name you add
    is the `agent:` value lessons will use.
 2. **Author** a `t_agent` entry with `agent: <your-name>` and place a
    `{{< LMS t="agent" >}}` widget.
@@ -213,7 +213,7 @@ and turns a `{agent, inputs}` into `result_html`. nabu is untouched. `agents[]` 
 
 **B. Replace the HTTP hop; nabu calls Bedrock directly (no self-hosted worker).**
 Introduce a small `Dispatcher` interface in
-[`agentsvc.go`](../../../internal/agentsvc/agentsvc.go) with one method
+[`agentsvc.go`](https://github.com/mrmxf/nabu/blob/main/internal/agentsvc/agentsvc.go) with one method
 (`Dispatch(ctx, DispatchRequest) (DispatchResult, error)`), give it two
 implementations — the current `httpWorker` and a new `bedrock` — and select via env
 (e.g. `DISPATCH_BACKEND=http|bedrock`). This is the one enabling refactor: today
@@ -259,7 +259,7 @@ shape it plugs into is already visible here:
   standalone blob — `DispatchResult` carries a structured contribution, not just
   HTML.
 - Agent contributions become **suggestions/edits** in the same CRDT humans edit, so
-  provenance ("who wrote this — a person or hattie?") and awareness/presence come for
+  provenance ("who wrote this — a person or an agent?") and awareness/presence come for
   free from Yjs.
 - The teacher dashboard reads the same documents live.
 

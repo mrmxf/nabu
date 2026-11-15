@@ -52,14 +52,14 @@ flowchart TD
    `index.md` in a leaf-bundle folder (so it can carry its own images). This is the
    only thing an author edits.
 
-2. **Read & split frontmatter** — [`parse.go`](../../../internal/content/parse.go).
+2. **Read & split frontmatter** — [`parse.go`](https://github.com/mrmxf/nabu/blob/main/internal/content/parse.go).
    `loadSlide` reads the file, then `parseFrontmatter` separates the top `--- … ---`
    YAML block from the Markdown body. The YAML becomes typed slide config (title,
    weight, `kind`, `choices`, `timers`, `sim_output`, readiness…); the body carries on
    to the renderer. A file with no frontmatter is treated as body-only; an
    unparseable one is flagged `CORRUPT` rather than aborting the whole load.
 
-3. **Expand includes** — [`include.go`](../../../internal/content/include.go).
+3. **Expand includes** — [`include.go`](https://github.com/mrmxf/nabu/blob/main/internal/content/include.go).
    `{{< LMS t="include" from="_references.md" >}}` is resolved **first**, before
    anything else looks at the text: the named file is spliced into the source, so
    from here on it is indistinguishable from text the author typed.
@@ -71,14 +71,14 @@ flowchart TD
    stop resolving. Includes don't nest — an included file is spliced verbatim and
    never rescanned — so cycles are impossible by construction.
 
-4. **Preprocess LMS shortcodes** — [`shortcodes.go`](../../../internal/content/shortcodes.go).
+4. **Preprocess LMS shortcodes** — [`shortcodes.go`](https://github.com/mrmxf/nabu/blob/main/internal/content/shortcodes.go).
    Before any Markdown is touched, each `{{< LMS … >}}` line (on its own line) is
    rewritten into an **inert** `<lms param='…'>` element that carries an HTML-escaped
    JSON payload of its arguments. Arguments are validated against `nabu-widget-catalogue.yaml` (the
    single source of truth); unknown widgets or bad args don't block rendering — they
    are recorded as issues that set the slide's content status.
 
-5. **Markdown → HTML** — [`render.go`](../../../internal/content/render.go).
+5. **Markdown → HTML** — [`render.go`](https://github.com/mrmxf/nabu/blob/main/internal/content/render.go).
    `goldmark.Convert` turns the body into HTML. It is configured to match the old
    client-side `marked` behaviour: **GFM** (tables, strikethrough, autolinks) plus
    **hard line breaks**, and **unsafe raw HTML passes through** — necessary so the
@@ -92,7 +92,7 @@ flowchart TD
    failure.
 
 7. **Store the HTML.** The result is a plain HTML string on `Slide.HTML`. During
-   seeding ([`seed.go`](../../../internal/seed/seed.go)) it is written to the
+   seeding ([`seed.go`](https://github.com/mrmxf/nabu/blob/main/internal/seed/seed.go)) it is written to the
    `body` field of the slide record in **PocketBase**. The Markdown is now fully
    rendered; from here on the server only ships HTML.
 
@@ -100,12 +100,12 @@ flowchart TD
    REST/realtime API. The pre-rendered HTML arrives as `SlideRec.body` — no Markdown
    parsing happens in the browser.
 
-9. **Inject** — [`Slide.svelte`](../../../web/src/lib/components/Slide.svelte).
+9. **Inject** — [`Slide.svelte`](https://github.com/mrmxf/nabu/blob/main/web/src/lib/components/Slide.svelte).
    The component drops the HTML in with `{@html slide.body}` inside a bound
    `<div>`. At this point the inert `<lms>` placeholders are sitting in the DOM,
    doing nothing yet.
 
-10. **Hydrate widgets** — [`registry.ts`](../../../web/src/lib/lms/registry.ts).
+10. **Hydrate widgets** — [`registry.ts`](https://github.com/mrmxf/nabu/blob/main/web/src/lib/lms/registry.ts).
    `hydrateLms` walks the injected DOM, finds each `<lms>` element, parses its JSON
    payload, and mounts the matching Svelte component (`timer` → `CountdownTimer`,
    `figure` → `LmsFigure`, `note` → `LmsNote`) into it. The registry keys must match

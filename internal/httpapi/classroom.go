@@ -334,3 +334,35 @@ func randomPassword() (string, error) {
 	}
 	return hex.EncodeToString(b), nil
 }
+
+// OpenSessions names the Sessions (schedule_sessions) a student can join with
+// classroom fast login right now, as "<course> / <lesson> / <session>", in
+// schedule order. `nabu classroom` uses it to warn when fast login has nothing
+// to offer.
+func OpenSessions(app core.App) ([]string, error) {
+	sessions, err := enrollableSessions(app)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(sessions))
+	for _, s := range sessions {
+		out = append(out, s.Course+" / "+s.Lesson+" / "+s.Name)
+	}
+	return out, nil
+}
+
+// SetClassroomFastLogin writes the app_config `classroom_fast_login` row and
+// returns its previous value, so a caller can switch fast login on for one run
+// and restore it afterwards.
+func SetClassroomFastLogin(app core.App, on bool) (bool, error) {
+	rec, err := app.FindFirstRecordByData("app_config", "key", "classroom_fast_login")
+	if err != nil || rec == nil {
+		return false, fmt.Errorf("app_config classroom_fast_login row not found (run nabu seed): %w", err)
+	}
+	prev := rec.GetString("value") == "true"
+	rec.Set("value", fmt.Sprintf("%t", on))
+	if err := app.Save(rec); err != nil {
+		return prev, fmt.Errorf("save classroom_fast_login: %w", err)
+	}
+	return prev, nil
+}

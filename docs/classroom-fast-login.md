@@ -24,9 +24,12 @@ form, so staff sign in exactly as before.
 
 ## Turning it on
 
-The flag is the `app_config` row `classroom_fast_login`. Two ways to set it:
+The flag is the `app_config` row `classroom_fast_login`. Three ways to set it:
 
-- **For one lesson (no rebuild)** — open the PocketBase dashboard at `/_/`, find
+- **For one lesson on a laptop (recommended)** — `nabu classroom` switches it on
+  for that run and restores the previous value when it exits (Ctrl-C or SIGTERM).
+  See `internal/classroom` and the help page `help:reference#laptop-deploy`.
+- **For one lesson on a running server (no rebuild)** — open the PocketBase dashboard at `/_/`, find
   the `app_config` collection, set the `classroom_fast_login` row's `value` to
   `true`. Set it back to `false` when the lesson ends.
 - **As a deployment default** — set `classroom_fast_login: true` in

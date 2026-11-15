@@ -10,7 +10,7 @@ so it is reachable as `.Params.*`.
 
 ```yaml
 ---
-title: The Human Newsroom
+title: A Task for People
 params:
   readiness: production           # DRAFT | production | deprecated | a go-live timestamp
   kind: human                     # intro | human | presentation | agent | discussion | reflection
@@ -36,9 +36,9 @@ params:
             - { key: b, label: "A pump that isn't broken" }
           rationale: "Steps, with dependencies between them."
   notes_label: "Your group's notes"   # optional: show a notes box
-  agent_key: hunter               # for kind=agent
+  agent_key: search               # for kind=agent
   sim_output: |                   # for kind=agent: the canned result (Markdown)
-    **hunter found 5 results…**
+    **search found 5 results…**
 ---
 The slide body, in **Markdown**. Tables, lists, images and blockquotes all work.
 ```

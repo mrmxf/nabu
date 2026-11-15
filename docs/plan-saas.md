@@ -264,6 +264,12 @@ The resume pointer comes only from the course outbox; the Worker never writes it
 
 ### Near term (2026-11-14)
 
+**Postponed to 2026-11-16 (logistics).** Step 1 starts there, and it is also the
+first real test of a `nabu init` course on Cloudflare: move nabu-tutorial onto the
+`nabu init` clog files, fill in a `cloudflare-pages` target and the Infisical block,
+switch deploy on, and check the `_headers` CORS rule from the live site. Feed what it
+finds back into the `nabu init` templates.
+
 1. Static `nabu build` to a preview Pages project; then switch on the
    `mrmxf.com/learn/` menu script in www-mrmxf. `nabu build` already writes the
    `_headers` rule giving `/content/index.json` `Access-Control-Allow-Origin: *`

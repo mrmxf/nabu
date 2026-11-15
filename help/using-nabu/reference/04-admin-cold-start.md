@@ -11,6 +11,9 @@ params:
     the roster, then back up and restore onto the target. Pairs with the
     agent deploy runbook, which proves the running system.
 ---
+Mode: self-hosted (one server you run). See [deployment modes](help:reference#deployment-modes);
+a classroom laptop needs none of this, only `nabu classroom`.
+
 This is the **admin data-lifecycle** runbook: the exact order to bring a box from
 a clean build to a running instance with accounts and content. It pairs with
 [agent deploy](help:reference#agent-deploy) — that runbook
@@ -22,17 +25,18 @@ All admin commands share one contract: **verbose by default**, `-q` prints only
 failures, **exit 0 on success/warnings and 1 on failure**, and **secrets are never
 printed** (env vars show as set/MISSING, never their values).
 
-## 1 · Build the binary
+## 1 · Get the binary
 
-Assumed starting point: a clean clone builds successfully.
+Download it from the [latest release](https://github.com/mrmxf/nabu/releases/latest)
+(the web app is built in), or build it in a clone of the repo:
 
 ```bash
-./nabu/scripts/build.sh                    # SPA -> pb_public, then the lean ./nabu/nabu
+./scripts/build.sh                    # the web app, then bin/nabu with it built in
 ```
 
 This box seeds its own content below (step 4), so there is nothing to `install`.
 `install` is only for the shipped-blob path — extracting a pre-baked `nabu-deploy`
-(from `nabu snapshot`) onto a target host (see [docs/user/deploy.md](../../../docs/user/deploy.md)).
+(from `nabu snapshot`) onto a target host (see [docs/user/deploy.md](https://github.com/mrmxf/nabu/blob/main/docs/user/deploy.md)).
 
 ## 2 · Validate the box is ready
 
@@ -83,23 +87,27 @@ Two things to know before you do this:
 ### 2b · Validate nabu's own configuration
 
 ```bash
-infisical run --env prod -- ./nabu/nabu admin validate
+infisical run --env prod -- nabu admin validate
 ```
 
 `validate` parses the content tree for things that need secrets (S3 buckets,
-agents), then checks the matching env vars, that `pb_data` is writeable and
-`pb_public` is built, and that a superuser exists or is configured. Fix every
-**FAIL** before continuing. If it reports buckets, apply their CORS policy once
+agents), then checks the matching env vars, that `pb_data` is writeable, that
+there is a web app to serve (built into the binary, or in `pb_public/`), and that
+a superuser exists or is configured. Fix every **FAIL** before continuing.
+
+`nabu doctor` runs the same checks quietly (it prints nothing when ready), and
+`nabu doctor --mode selfhost` or `--mode saas` adds that mode's checks. Use
+`validate` when you want the full list of what passed. If it reports buckets, apply their CORS policy once
 each (so browser uploads work):
 
 ```bash
-infisical run --env prod -- ./nabu/nabu admin s3 set-cors --bucket <bucket-it-named>
+infisical run --env prod -- nabu admin s3 set-cors --bucket <bucket-it-named>
 ```
 
 Optionally prove S3 write access end-to-end:
 
 ```bash
-infisical run --env prod -- ./nabu/nabu admin validate --deep
+infisical run --env prod -- nabu admin validate --deep
 ```
 
 ## 3 · Apply PocketBase settings from config
@@ -108,8 +116,8 @@ Push the `pocketbase.*` block of `nabu-config.yaml` (app name/URL, SMTP, and the
 backup schedule + S3 target) into PocketBase's own settings:
 
 ```bash
-infisical run --env prod -- ./nabu/nabu admin settings apply --dry-run   # preview first
-infisical run --env prod -- ./nabu/nabu admin settings apply             # then apply (prompts)
+infisical run --env prod -- nabu admin settings apply --dry-run   # preview first
+infisical run --env prod -- nabu admin settings apply             # then apply (prompts)
 ```
 
 > ⚠️ **The shipped `pocketbase:` block is a placeholder scaffold.** `settings
@@ -126,7 +134,7 @@ Wrap `seed` with Infisical so the superuser password (`NABU_SUPERUSER_PW`) is
 present — it is never a committed literal:
 
 ```bash
-infisical run --env prod -- ./nabu/nabu seed   # idempotent: content, demo accounts, + superuser (admin@nabu.example)
+infisical run --env prod -- nabu seed   # idempotent: content, demo accounts, + superuser (admin@nabu.example)
 ```
 
 The demo accounts (students/teacher/app-admin) only seed while `demo_mode` is on
@@ -138,7 +146,7 @@ roster entry in step 5.
 ## 5 · Install the roster
 
 ```bash
-./nabu/nabu users import --from roster.yaml --mode merge
+nabu users import --from roster.yaml --mode merge
 ```
 
 ## 6 · Back up here, restore on the target
@@ -146,13 +154,13 @@ roster entry in step 5.
 Capture accounts + state (this bundle carries password hashes — keep it safe):
 
 ```bash
-./nabu/nabu admin backup --out backup.yaml
+nabu admin backup --out backup.yaml
 ```
 
 Move `backup.yaml` to the target instance, then restore it there:
 
 ```bash
-./nabu/nabu admin restore --from backup.yaml
+nabu admin restore --from backup.yaml
 ```
 
 ## Done → prove it runs
@@ -161,5 +169,5 @@ The instance now has its accounts and content. Serve it and walk the runtime
 gates in [agent deploy](help:reference#agent-deploy):
 
 ```bash
-infisical run --env prod -- ./nabu/nabu serve --dir /data/pb_data
+infisical run --env prod -- nabu serve --dir /data/pb_data
 ```

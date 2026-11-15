@@ -4,13 +4,25 @@ params:
   readiness: production
   kind: intro
 ---
-This lesson walks you from a **clean clone** to clicking through the working
-demo. It covers the Phase 2 browser demo — the part that runs today: real login,
-course and lesson pickers, a resumable lesson sequencer, and simulated agent
-screens.
+This quickstart takes you from nothing to a working course in about ten minutes.
+You will:
 
-You're reading it inside Nabu itself: this help *is* a Nabu lesson.
+1. install Nabu,
+2. make a course,
+3. run it on your laptop,
+4. edit a slide,
+5. let a room of students join it.
 
+You need a laptop running Linux, macOS or Windows, and a terminal. You do not
+need to install anything else.
+
+You're reading this inside Nabu: this help is itself a Nabu course.
 <small>You're running {{< LMS t="nabu-info" >}}.</small>
 
+**Stuck?** Every step works the same way when something goes wrong: run
+`nabu doctor` and do what it says. If that doesn't help, the
+[troubleshooting page][trouble] covers the common problems.
+
 Press **Next** to begin.
+
+[trouble]: help:reference#troubleshooting

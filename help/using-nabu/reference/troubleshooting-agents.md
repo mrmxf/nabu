@@ -101,7 +101,7 @@ with a minimal, non-login `PATH`; a Node installed under **your** home
 Run is refused with `agent_unavailable`. The worker is up but doesn't advertise
 that agent. Check `/healthz` `agents[]`: the `agent:` value in the slide's
 `t_agent` must appear there. Fix by advertising it in
-[worker/main.go](../../../cmd/nabu-worker/main.go) (the `agents` list +
+[worker/main.go](https://github.com/mrmxf/nabu/blob/main/cmd/nabu-worker/main.go) (the `agents` list +
 a `runAgent` branch). A typo in the lesson's `agent:` is the usual cause.
 
 ### "Your group's queue is full"

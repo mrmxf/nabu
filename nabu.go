@@ -45,6 +45,7 @@ import (
 
 	"github.com/mrmxf/nabu/embedfs"
 	"github.com/mrmxf/nabu/internal/admin"
+	"github.com/mrmxf/nabu/internal/classroom"
 	"github.com/mrmxf/nabu/internal/demo"
 	"github.com/mrmxf/nabu/internal/deploy"
 	"github.com/mrmxf/nabu/internal/hooks"
@@ -131,7 +132,7 @@ type App struct {
 var preBootstrapCommands = map[string]bool{"build": true, "init": true, "web": true, "fetch": true}
 
 // New builds a Nabu App. It registers Nabu's commands (seed, stop, users,
-// admin, snapshot, install, migrate), global flags (-c/--config,
+// admin, doctor, classroom, snapshot, install, migrate), global flags (-c/--config,
 // -C/--course-dir), hooks and routes, but does not start anything.
 //
 // New sets package-level state shared by Nabu's internals (the baked config and
@@ -178,7 +179,16 @@ func New(opts Options) *App {
 	pb.RootCmd.AddCommand(webfetch.NewCommand())
 	pb.RootCmd.AddCommand(serverctl.NewStopCommand(pb))
 	pb.RootCmd.AddCommand(students.NewCommand(pb))
-	pb.RootCmd.AddCommand(admin.NewCommand(pb))
+	checks := admin.Env{Sources: sources, Web: app.webApp()}
+	pb.RootCmd.AddCommand(admin.NewCommand(pb, checks))
+	pb.RootCmd.AddCommand(admin.NewDoctorCommand(pb, checks))
+	pb.RootCmd.AddCommand(classroom.NewCommand(pb, sources, func() *cobra.Command {
+		serve, _, err := pb.RootCmd.Find([]string{"serve"})
+		if err != nil || serve.Name() != "serve" {
+			return nil
+		}
+		return serve
+	}))
 	pb.RootCmd.AddCommand(deploy.NewSnapshotCommand(pb))
 	pb.RootCmd.AddCommand(deploy.NewInstallCommand(pb))
 

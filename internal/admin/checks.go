@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -32,7 +33,12 @@ const (
 // prints; secrets are never logged (only env-var names + set/MISSING).
 type validator struct {
 	quiet bool
-	worst severity
+	// hidePass drops PASS lines and the passing summary but keeps WARN:
+	// `nabu doctor` is silent when ready and still shows what needs a look.
+	hidePass bool
+	worst    severity
+	// fails counts FAIL outcomes, for the caller's error.
+	fails int
 }
 
 // record logs one outcome and tracks the worst severity seen. kv are extra
@@ -42,6 +48,9 @@ func (v *validator) record(sev severity, check string, kv ...any) {
 	if sev > v.worst {
 		v.worst = sev
 	}
+	if sev == sevFail {
+		v.fails++
+	}
 	switch sev {
 	case sevFail:
 		slog.Error(check, append([]any{"status", "FAIL"}, kv...)...)
@@ -50,7 +59,7 @@ func (v *validator) record(sev severity, check string, kv ...any) {
 			slog.Warn(check, append([]any{"status", "WARN"}, kv...)...)
 		}
 	default:
-		if !v.quiet {
+		if !v.quiet && !v.hidePass {
 			slog.Info(check, append([]any{"status", "PASS"}, kv...)...)
 		}
 	}
@@ -69,7 +78,7 @@ func (v *validator) summary() {
 			slog.Warn("validation passed with warnings")
 		}
 	default:
-		if !v.quiet {
+		if !v.quiet && !v.hidePass {
 			slog.Info("validation passed")
 		}
 	}
@@ -77,21 +86,26 @@ func (v *validator) summary() {
 
 // checkOpts configures a validation run.
 type checkOpts struct {
-	deep       bool
-	contentDir string
+	deep bool
+	// content is the authored course tree (on disk, or embedded in a course binary).
+	content source.Tree
+	// web is the built web app the binary serves (Options.Public or the
+	// webembed copy); nil means pb_public/ on disk only.
+	web fs.FS
 }
 
 // runChecks executes every readiness check in fast-fail order. It does not stop
 // on the first failure — it runs them all so one pass surfaces every fixable
 // problem — but any FAIL makes failed() true.
-func runChecks(ctx context.Context, app core.App, v *validator, opt checkOpts) {
-	cfg := checkConfig(v)                      // 1 · embedded config parses
-	checkDBPaths(v, app)                       // 2 · pb_data writeable, pb_public present
-	checkSuperuser(v, app, cfg)                // 3 · a superuser exists or is configured
-	courses := checkContent(v, opt.contentDir) // 4 · content parses + declares needs
+func runChecks(ctx context.Context, app core.App, v *validator, opt checkOpts) []content.Course {
+	cfg := checkConfig(v)                   // 1 · embedded config parses
+	checkDBPaths(v, app, opt.web)           // 2 · pb_data writeable, a web app to serve
+	checkSuperuser(v, app, cfg)             // 3 · a superuser exists or is configured
+	courses := checkContent(v, opt.content) // 4 · content parses + declares needs
 	n := deriveNeeds(courses)
 	checkEnv(v, cfg, n)          // 5 · env vars present for the discovered needs
 	checkS3(ctx, v, n, opt.deep) // 6 · buckets reachable (and writeable, if --deep)
+	return courses
 }
 
 // needs is what the content tree implies the deployment must provide.
@@ -140,19 +154,33 @@ func checkConfig(v *validator) *embedfs.Config {
 	return cfg
 }
 
-func checkDBPaths(v *validator, app core.App) {
+func checkDBPaths(v *validator, app core.App, web fs.FS) {
 	dataDir := app.DataDir()
 	if err := probeWriteable(dataDir); err != nil {
 		v.record(sevFail, "pb_data writeable", "dir", dataDir, "err", err)
 	} else {
 		v.record(sevPass, "pb_data writeable", "dir", dataDir)
 	}
-	pub := filepath.Join(filepath.Dir(dataDir), "pb_public")
-	if fi, err := os.Stat(pub); err != nil || !fi.IsDir() {
-		v.record(sevFail, "pb_public present", "dir", pub, "hint", "build the SPA: nabu/scripts/build.sh")
-	} else {
-		v.record(sevPass, "pb_public present", "dir", pub)
+	if hasIndex(web) {
+		v.record(sevPass, "web app built in")
+		return
 	}
+	pub := filepath.Join(filepath.Dir(dataDir), "pb_public")
+	if hasIndex(os.DirFS(pub)) {
+		v.record(sevPass, "web app on disk", "dir", pub)
+		return
+	}
+	v.record(sevFail, "no web app to serve", "dir", pub,
+		"fix", "use a release binary (it has the web app built in), run nabu web fetch in a library course, or build it: scripts/build.sh")
+}
+
+// hasIndex reports whether fsys holds a built web app (an index.html at its root).
+func hasIndex(fsys fs.FS) bool {
+	if fsys == nil {
+		return false
+	}
+	st, err := fs.Stat(fsys, "index.html")
+	return err == nil && !st.IsDir()
 }
 
 // probeWriteable creates and removes a temp file to prove dir is writeable.
@@ -167,8 +195,8 @@ func probeWriteable(dir string) error {
 }
 
 func checkSuperuser(v *validator, app core.App, cfg *embedfs.Config) {
-	if supers, err := app.FindAllRecords(core.CollectionNameSuperusers); err == nil && len(supers) > 0 {
-		v.record(sevPass, "superuser exists", "count", len(supers))
+	if n := realSuperusers(app); n > 0 {
+		v.record(sevPass, "superuser exists", "count", n)
 		return
 	}
 	su := superuserCfg(cfg)
@@ -178,17 +206,34 @@ func checkSuperuser(v *validator, app core.App, cfg *embedfs.Config) {
 				"email", su.Email, "password_env", su.PasswordEnv)
 			return
 		}
-		v.record(sevFail, "superuser configured but password env unset",
-			"email", su.Email, "password_env", su.PasswordEnv)
+		v.record(sevWarn, "no superuser yet: password env unset",
+			"email", su.Email, "password_env", su.PasswordEnv,
+			"fix", "set "+su.PasswordEnv+" and run nabu seed, or open /_/ and use the one-time installer link nabu serve prints")
 		return
 	}
-	v.record(sevFail, "no superuser and none configured",
-		"hint", "run `nabu seed` (demo), `nabu users import` a roster with a `role: superuser` entry, or open /_/ to create the first superuser")
+	v.record(sevWarn, "no superuser yet, none configured",
+		"fix", "run nabu seed with NABU_SUPERUSER_PW set, nabu users import a roster with a role: superuser entry, or open /_/ and use the one-time installer link nabu serve prints")
 }
 
-func checkContent(v *validator, dir string) []content.Course {
-	if _, err := os.Stat(dir); err != nil {
-		v.record(sevWarn, "content tree", "dir", dir, "detail", "not found; skipping content checks")
+// realSuperusers counts superusers, leaving out the placeholder PocketBase
+// keeps (core.DefaultInstallerEmail) until the first real one is created.
+func realSuperusers(app core.App) int {
+	supers, err := app.FindAllRecords(core.CollectionNameSuperusers)
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, s := range supers {
+		if s.Email() != core.DefaultInstallerEmail {
+			n++
+		}
+	}
+	return n
+}
+
+func checkContent(v *validator, tree source.Tree) []content.Course {
+	if !tree.Exists() {
+		v.record(sevWarn, "content tree", "source", tree.Label, "detail", "not found; skipping content checks")
 		return nil
 	}
 	r, err := content.NewRenderer("goldmark")
@@ -196,9 +241,9 @@ func checkContent(v *validator, dir string) []content.Course {
 		v.record(sevFail, "content renderer", "err", err)
 		return nil
 	}
-	courses, err := content.Load(source.Disk(dir), r, content.Options{})
+	courses, err := content.Load(tree, r, content.Options{})
 	if err != nil {
-		v.record(sevFail, "content load", "dir", dir, "err", err)
+		v.record(sevFail, "content load", "source", tree.Label, "err", err)
 		return nil
 	}
 	probs := content.Problems(courses)
@@ -210,7 +255,7 @@ func checkContent(v *validator, dir string) []content.Course {
 		}
 	}
 	if len(probs) == 0 {
-		v.record(sevPass, "content parses clean", "dir", dir, "courses", len(courses))
+		v.record(sevPass, "content parses clean", "source", tree.Label, "courses", len(courses))
 	}
 	return courses
 }

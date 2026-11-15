@@ -706,3 +706,36 @@ func (s *fileAssetSink) Copy(src source.Tree, rel, publicRel string) (string, er
 	}
 	return "/" + publicRel, nil
 }
+
+// ContentTree is the course content tree that `seed` reads, by the same
+// precedence: p.Content, then src.Content, then course.content.
+func ContentTree(p Paths, src Sources) (source.Tree, error) {
+	cp, err := CoursePaths()
+	if err != nil {
+		return source.Tree{}, err
+	}
+	return resolveTrees(p, src, cp).content, nil
+}
+
+// LoadCourses parses ContentTree without touching a database. It returns the
+// courses and the tree's label for messages; a tree that does not exist yields
+// no courses and no error. Readiness checks (`nabu doctor`, `nabu classroom`)
+// use it.
+func LoadCourses(p Paths, src Sources) ([]content.Course, string, error) {
+	tree, err := ContentTree(p, src)
+	if err != nil {
+		return nil, "", err
+	}
+	if !tree.Exists() {
+		return nil, tree.Label, nil
+	}
+	r, err := content.NewRenderer(defaultRenderer)
+	if err != nil {
+		return nil, tree.Label, err
+	}
+	courses, err := content.Load(tree, r, content.Options{})
+	if err != nil {
+		return nil, tree.Label, fmt.Errorf("load content %s: %w", tree.Label, err)
+	}
+	return courses, tree.Label, nil
+}

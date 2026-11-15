@@ -134,6 +134,7 @@ func Create(o Options) error {
 		{"course_index.md.tmpl", filepath.Join("content", o.Course, "_index.md")},
 		{"lesson_index.md.tmpl", filepath.Join(lessonDir, "_index.md")},
 		{"slide_welcome.md.tmpl", filepath.Join(lessonDir, "010-welcome.md")},
+		{"lesson-schedules.yaml.tmpl", filepath.Join("content", "lesson-schedules.yaml")},
 		{"clog.yaml.tmpl", ".clog.yaml"},
 		{"clog-version.tmpl", ".clog-version"},
 	}

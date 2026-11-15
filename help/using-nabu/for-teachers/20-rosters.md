@@ -41,7 +41,7 @@ about this again.
 
 The smallest roster that does something useful: an email, a name, and the course
 to put people in. Everyone here becomes a **student** (the default role) in the
-`rise-summer` course. Because no `uid` is given, Nabu generates one for each from
+`sample-lab` course. Because no `uid` is given, Nabu generates one for each from
 the email — `alice`, `betty`, `ciara`, `donald`.
 
 **CSV** — note `courses` is separated with `;` because `,` is the column
@@ -49,10 +49,10 @@ delimiter:
 
 ```csv
 email,name,courses
-alice@nabu.example,Alice,rise-summer
-betty@nabu.example,Betty,rise-summer
-ciara@nabu.example,Ciara,rise-summer
-donald@nabu.example,Donald,rise-summer
+alice@nabu.example,Alice,sample-lab
+betty@nabu.example,Betty,sample-lab
+ciara@nabu.example,Ciara,sample-lab
+donald@nabu.example,Donald,sample-lab
 ```
 
 The same thing in **YAML**:
@@ -61,16 +61,16 @@ The same thing in **YAML**:
 users:
   - email: alice@nabu.example
     name: Alice
-    courses: [rise-summer]
+    courses: [sample-lab]
   - email: betty@nabu.example
     name: Betty
-    courses: [rise-summer]
+    courses: [sample-lab]
   - email: ciara@nabu.example
     name: Ciara
-    courses: [rise-summer]
+    courses: [sample-lab]
   - email: donald@nabu.example
     name: Donald
-    courses: [rise-summer]
+    courses: [sample-lab]
 ```
 
 That is enough to create four student accounts and enrol them. Everything else
@@ -82,19 +82,19 @@ takes a sensible default: `role` is `student`, `verified` is `true`, and each
 Here is the same course with every field filled in — including two **teachers**,
 Xavier and Yaja. Teachers get `role: teacher`; being listed against a course
 enrols them as that course's teacher rather than as a learner. Note that Xavier
-teaches two courses (`rise-summer` and `autumn-term`), and everyone has an
+teaches two courses (`sample-lab` and `autumn-term`), and everyone has an
 explicit `uid` so you can rename their email freely later.
 
 **CSV**:
 
 ```csv
 uid,email,name,role,courses,password,verified
-s7g1-alice,alice@nabu.example,Alice,student,rise-summer,secret1234,true
-s7g1-betty,betty@nabu.example,Betty,student,rise-summer,secret1234,true
-s7g1-ciara,ciara@nabu.example,Ciara,student,rise-summer,secret1234,true
-s7g1-donald,donald@nabu.example,Donald,student,rise-summer,secret1234,true
-s7g1-xavier,xavier@nabu.example,Xavier,teacher,rise-summer;autumn-term,secret1234,true
-s7g1-yaja,yaja@nabu.example,Yaja,teacher,rise-summer,secret1234,true
+s7g1-alice,alice@nabu.example,Alice,student,sample-lab,secret1234,true
+s7g1-betty,betty@nabu.example,Betty,student,sample-lab,secret1234,true
+s7g1-ciara,ciara@nabu.example,Ciara,student,sample-lab,secret1234,true
+s7g1-donald,donald@nabu.example,Donald,student,sample-lab,secret1234,true
+s7g1-xavier,xavier@nabu.example,Xavier,teacher,sample-lab;autumn-term,secret1234,true
+s7g1-yaja,yaja@nabu.example,Yaja,teacher,sample-lab,secret1234,true
 ```
 
 **YAML**:
@@ -105,42 +105,42 @@ users:
     email: alice@nabu.example
     name: Alice
     role: student
-    courses: [rise-summer]
+    courses: [sample-lab]
     password: secret1234
     verified: true
   - uid: s7g1-betty
     email: betty@nabu.example
     name: Betty
     role: student
-    courses: [rise-summer]
+    courses: [sample-lab]
     password: secret1234
     verified: true
   - uid: s7g1-ciara
     email: ciara@nabu.example
     name: Ciara
     role: student
-    courses: [rise-summer]
+    courses: [sample-lab]
     password: secret1234
     verified: true
   - uid: s7g1-donald
     email: donald@nabu.example
     name: Donald
     role: student
-    courses: [rise-summer]
+    courses: [sample-lab]
     password: secret1234
     verified: true
   - uid: s7g1-xavier
     email: xavier@nabu.example
     name: Xavier
     role: teacher
-    courses: [rise-summer, autumn-term]
+    courses: [sample-lab, autumn-term]
     password: secret1234
     verified: true
   - uid: s7g1-yaja
     email: yaja@nabu.example
     name: Yaja
     role: teacher
-    courses: [rise-summer]
+    courses: [sample-lab]
     password: secret1234
     verified: true
 ```
@@ -173,8 +173,8 @@ From the CLI on the Nabu host:
 # create/update everyone in the file, adding course enrolments (safe default)
 nabu users import --from roster.yaml
 
-# make rise-summer exactly match the file — drop students who aren't in it
-nabu users import --from roster.yaml --mode delete-orphans --course rise-summer
+# make sample-lab exactly match the file — drop students who aren't in it
+nabu users import --from roster.yaml --mode delete-orphans --course sample-lab
 ```
 
 ## Exporting a roster — and seeing where students are
@@ -185,8 +185,8 @@ you ask for positions — adds a read-only column for **where each student has g
 to** in every lesson (which slide, a percentage, and a status).
 
 ```bash
-# export just the rise-summer roster, with positions, as CSV
-nabu users export --out roster.csv --course rise-summer --positions
+# export just the sample-lab roster, with positions, as CSV
+nabu users export --out roster.csv --course sample-lab --positions
 ```
 
 The live view of a course — its teachers, its students, and each student's

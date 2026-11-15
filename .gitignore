@@ -22,3 +22,6 @@ _clog_deploy/
 
 # local working notes (tmp-handover-plan.md etc.), never committed
 /tmp-*.md
+
+# wrangler local cache
+.wrangler/

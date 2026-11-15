@@ -1,0 +1,9 @@
+# Sessions students can join. nabu seed loads this file.
+#
+# A Session with no `enroll` dates is always open, so `nabu classroom` can sign
+# students in by name straight away. For a real cohort, give it a window:
+#   enroll: { from: "2026-12-01 09:00:00Z", to: "2026-12-01 12:00:00Z" }
+lesson-schedules:
+  - lesson: {{.Lesson}}
+    sessions:
+      - name: Practice run

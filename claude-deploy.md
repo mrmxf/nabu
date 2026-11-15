@@ -15,7 +15,9 @@ There is no `ko`, Dockerfile, compose file or Wrangler config yet. Never add `ko
 ## Two deployment modes (target; not built yet)
 
 Every deploy doc and help page must say which mode it is about, and link to the
-modes help lesson (`help/using-nabu/reference/05-deployment-modes.md`, planned).
+modes help lesson, `help:reference#deployment-modes`
+(`help/using-nabu/reference/05-deployment-modes.md`). `nabu doctor --mode <mode>` checks
+a machine for one mode.
 
 | | Canonical SaaS on Cloudflare | Interactive classroom on a laptop |
 |---|---|---|
@@ -54,8 +56,11 @@ Three tiers, joined by contracts defined once in `academy/contract/`:
 ### Classroom shape
 
 One file: the release `nabu` binary for the teacher's OS (linux/darwin/windows,
-amd64/arm64), with the web app embedded. `nabu seed`, then
-`nabu serve --http 0.0.0.0:8090`; students open the laptop's LAN IP. It must work with
+amd64/arm64), with the web app embedded. `nabu classroom` (`internal/classroom`) seeds,
+switches classroom fast login on for the run (restored on exit), serves on `0.0.0.0:8090`,
+prints the LAN URLs and a QR code, warns about agent jobs with no offline fallback, and
+`--export` writes the student roster with positions on Ctrl-C. `nabu init` writes an
+always-open practice Session in `content/lesson-schedules.yaml`, so fast login works at once. It must work with
 the Wi-Fi uplink off. When no worker is reachable, agent jobs authored with
 `sim_output_fallback: true` show the slide's `sim_output`; others report the worker
 offline, so classroom content should set the fallback. The transport policy already

@@ -33,7 +33,8 @@ that run.
 
 Because these are ordinary `app_config` rows, a value can also be flipped
 live in the PocketBase dashboard at `/_/` without a rebuild or reseed — which is
-how `classroom_fast_login` is meant to be switched on for a single lesson.
+one way to switch `classroom_fast_login` on for a single lesson. On a classroom
+laptop, `nabu classroom` does it for the run and restores it on exit.
 
 ## Numbering patterns
 

@@ -8,29 +8,33 @@ params:
 
 - New slides default to `readiness: DRAFT` — invisible to students until you set
   `production` or a go-live timestamp.
-- A broken file is recorded as `content: CORRUPT` and skipped, without aborting
-  the rest of the ingest.
+- A broken file is recorded as `content: CORRUPT` and skipped. The rest of the
+  course still loads, then `nabu seed` exits with an error that names the file.
 
 **Applying your changes**
 
-Re-run the seed to ingest edits:
+Seed again to load your edits. `nabu seed` will not run while the server is
+running, so stop it first:
 
 ```sh
-go run ./nabu seed
+nabu stop
+nabu seed
+nabu serve
 ```
 
-That's it — your new slides appear the next time a student opens the lesson.
+Your changes appear the next time a student opens the lesson.
 
 **Before you deploy to a running instance**
 
 After editing content or rosters, the one command to run is:
 
 ```sh
-nabu admin validate -q
+nabu doctor                   # add --mode classroom or --mode saas for that mode
 ```
 
-It is **silent when everything is fine** and **noisy only on error** — a clean
-(no-output, exit 0) run is your go/no-go gate before pushing. It catches the
+It is **silent when everything is fine** and prints each problem with its fix
+otherwise. A clean run (no output, exit 0) is your go/no-go gate before pushing.
+`nabu admin validate -q` runs the same shared checks. It catches the
 common traps early: a new lesson that names an S3 bucket with no credentials set,
 content that fails to parse, or a missing superuser. Fix any printed FAIL lines,
 re-run until silent, then deploy.

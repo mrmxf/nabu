@@ -68,13 +68,13 @@ the time. Cap parallelism low and let the queue absorb the rest — a job that w
 
 ### Images share the same card
 
-pixie's "make an image" mode runs a **separate** txt2img server (an A1111-compatible
+An image agent (one whose authored `format` is `image`) runs a **separate** txt2img server (an A1111-compatible
 API), not Ollama — but on a 16GB card it competes with the LLM for the same VRAM. A
 resident 9GB LLM leaves ~7GB, which co-resides with a light **SD 1.5** model but is
 tight for full **SDXL** without offloading; when they don't fit, they evict each
 other on every text↔image switch (a slowdown under WSL, not a crash). The sizing
 call, install, and wiring are their own one-off runbook:
-[docs/image-server-setup.md](../../../docs/image-server-setup.md).
+[docs/image-server-setup.md](https://github.com/mrmxf/nabu/blob/main/docs/image-server-setup.md).
 
 ### When to outgrow this
 

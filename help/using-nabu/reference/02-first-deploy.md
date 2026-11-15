@@ -6,13 +6,17 @@ params:
   kind: presentation
   audience: admin
   summary: |
-    Stand up nabu from a local clone with your own content and rosters, wire up
+    Stand up nabu from the release binary with your own content and rosters, wire up
     peasoup S3 for lesson resources, and deploy behind Caddy on a Scaleway ARM
     instance. Then validate with the bring-up runbook.
 ---
-This is an **admin**'s  **first-deploy** walk through.
+Mode: self-hosted, on one cloud instance. See [deployment modes](help:reference#deployment-modes)
+for the classroom and Cloudflare alternatives; this page will become the
+Cloudflare walkthrough.
 
-You will: _clone_ nabu → _seed _content & rosters → _config_ object storage → _config_ the nabu app → _host_ in the cloud.
+This is an **admin**'s **first-deploy** walk through.
+
+You will: _get_ nabu → _seed _content & rosters → _config_ object storage → _config_ the nabu app → _host_ in the cloud.
 
 Assumptions:
 
@@ -24,8 +28,8 @@ Assumptions:
 
 ## 0 · Prerequisites
 
-- Go 1.26+, Node 20+, and git on the build machine
-- A clone of the repo [github.com/mrmxf/nabu][public-repo]
+- The `nabu` release binary (step 1). Building from source also needs Go 1.26+,
+  Node 22+, git and a clone of [github.com/mrmxf/nabu][public-repo].
 - Your **content tree** in Hugo layout: `/path/to/courses/content/<course>/<lesson>/<slide>.md`
   (same shape as nabu's demo repo's `content/`).
 - Your **[rosters]** as `/path/to/rosters/*.yaml` (the `users:` envelope — see the
@@ -33,15 +37,17 @@ Assumptions:
 - `/usr/local/bin` is on your PATH
 - **important** this documentation assumes nabu is on your path. It's only for convenience - you can run it from wherever you want.
 
-## 1 · Build
+## 1 · Get nabu
 
-You don't need this step if you have been given a link to download the binary. Ensure you have the prerequisites done before you start
+Download the binary for your machine from the [latest release][release] and put
+it on your path as `nabu` (the [quickstart](help:getting-started#install) shows
+how). Release binaries have the web app built in.
+
+To build from source instead, in a clone of the repo:
 
 ```bash
-# build the Svelte SPA → ./pb_public, then the Go binary
-./nabu/scripts/build.sh
-# put the nabu executable on your path
-sudo mv ./nabu/nabu /usr/local/bin/nabu
+./scripts/build.sh              # the web app, then bin/nabu with it built in
+sudo mv bin/nabu /usr/local/bin/nabu
 ```
 
 ## 2 · Seed your content
@@ -68,7 +74,7 @@ The `merge` option upserts by `uid` without touching other users:
 
 ```bash
 for f in /path/to/rosters/*.yaml; do
-  ./nabu/nabu users import --from "$f" --mode merge
+  nabu users import --from "$f" --mode merge
 done
 ```
 
@@ -170,7 +176,7 @@ params:
 ```
 
 Teacher uploads then land at `{S3_PUBLIC_BASE}/{bucket}/{prefix}/resources/<file>` —
-e.g. `https://s3.eu-west-1.peasoup.cloud/MyBucket-123456/rise-summer/secret-agents/resources/brief.pdf`.
+e.g. `https://s3.eu-west-1.peasoup.cloud/MyBucket-123456/sample-lab/first-lesson/resources/brief.pdf`.
 
 ### Running nabu with secrets from Infisical (Linux)
 
@@ -212,7 +218,7 @@ This tells the command line how to connect to host `lms`
 ```sh
 #run this command on the LOCAL machine
 # make a file called nabu-rc on the cloud host
-scp ./nabu/nabu  lms:/opt/nabu/nabu-rc
+scp bin/nabu  lms:/opt/nabu/nabu-rc
 ```
 
 Now you can setyp
@@ -234,14 +240,9 @@ Running in the cloud is designed to be cheap:
 - **Caddy** gives automatic TLS for secure https browsing
 - S3 is cheap storage and can be on any provider
 
-**Build for arm64** (SPA first), or build on the instance:
-
-```bash
-(cd nabu/web && npm ci && npm run build)                 # -> ./pb_public
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o nabu/nabu ./nabu
-```
-
-Ship `nabu` + `./pb_public` (+ your `/path/to/courses` and `/path/to/rosters`)
+**Get the arm64 binary.** Download `nabu-arm-lnx` from the
+[latest release][release]: it has the web app built in, so nothing else needs
+building. Ship it as `nabu` (with your `/path/to/courses` and `/path/to/rosters`)
 to the instance, e.g. `/opt/nabu`.
 
 
@@ -341,7 +342,8 @@ never a public port.
   secrets in Infisical (never git); Caddy TLS live; worker tailnet-only; S3 keys
   only in nabu's ENV. Details in `docs/secrets.md`.
 
-[content]:     ../authoring-lessons/00-intro.md
+[content]:     help:authoring-lessons
 [infisical]:   https://eu.infisical.com
-[rosters]:     ../for-teachers/20-rosters.md
+[rosters]:     help:for-teachers#rosters
 [public-repo]: https://github.com/mrmxf/nabu
+[release]: https://github.com/mrmxf/nabu/releases/latest

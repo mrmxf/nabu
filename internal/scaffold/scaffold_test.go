@@ -36,7 +36,8 @@ func TestCreateCourse(t *testing.T) {
 	for _, f := range []string{"nabu.yaml", ".gitignore", ".gitattributes", "README.md",
 		"content/sample-lab/_index.md", "content/sample-lab/first-steps/_index.md",
 		"content/sample-lab/first-steps/010-welcome.md",
-		".clog.yaml", ".clog-version", ".github/workflows/course.yaml"} {
+		".clog.yaml", ".clog-version", ".github/workflows/course.yaml",
+		"content/lesson-schedules.yaml"} {
 		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
 			t.Errorf("missing %s", f)
 		}
@@ -49,8 +50,13 @@ func TestCreateCourse(t *testing.T) {
 	if cfg := read(t, dir, "nabu.yaml"); !strings.Contains(cfg, "name: Sample Lab") {
 		t.Errorf("nabu.yaml title not derived from the slug:\n%s", cfg)
 	}
-	if ign := read(t, dir, ".gitignore"); !strings.Contains(ign, "content/*/*/media/") || !strings.Contains(ign, "_clog_build/") {
+	if ign := read(t, dir, ".gitignore"); !strings.Contains(ign, "content/*/*/media/") || !strings.Contains(ign, "_clog_build/") ||
+		!strings.Contains(ign, "/roster.yaml") {
 		t.Errorf(".gitignore does not keep media and build output out of git:\n%s", ign)
+	}
+	sched := parseYAML(t, dir, "content/lesson-schedules.yaml")
+	if ls, _ := sched["lesson-schedules"].([]any); len(ls) != 1 || ls[0].(map[string]any)["lesson"] != "first-steps" {
+		t.Errorf("lesson-schedules.yaml does not open a Session on the first lesson: %v", sched)
 	}
 	if err := Create(Options{Dir: dir}); err == nil || !strings.Contains(err.Error(), "not empty") {
 		t.Errorf("second Create into the same dir: err = %v", err)

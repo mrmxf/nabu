@@ -1,140 +1,124 @@
 ---
-title: Laptop deployment (classroom on localhost)
+title: Classroom on a laptop
 weight: 18
 params:
   readiness: production
   kind: presentation
   audience: admin
   summary: |
-    Run the whole of nabu on a tech-savvy teacher's laptop and let students in the
-    room log in over the same Wi-Fi. Fast, self-contained, no cloud — with the
-    security trade-offs that come with it. Mac and Windows variants included.
+    Run a live lesson from a teacher's laptop with nabu classroom: students on
+    the same Wi-Fi type their name and join. No cloud and no internet, with the
+    security trade-offs that come with it. Linux, macOS and Windows.
 ---
-This is the **laptop / classroom** path: a tech-savvy teacher (wearing an admin
-hat) runs nabu on their own machine and students connect from their devices over
-the local Wi-Fi. It's the quickest way to run a live session with no cloud, no
-Caddy, no DNS. For a real hosted install use
-[first deployment](help:reference#first-deploy) instead.
+Mode: classroom. See [deployment modes][modes] for the alternative, a hosted
+course.
 
-## ⚠ Security precautions — read first
+The teacher's laptop runs Nabu, and students connect from their own devices over
+the room's Wi-Fi. It needs no cloud account, no domain name and no internet.
 
-Running this means **binding nabu to your local network so other devices can reach
-it**. That is fine for a classroom on a network you trust, and risky anywhere else.
+## Security: read this first
 
-- **Trusted Wi-Fi only.** Use the school/venue network you control. **Never** on
-  café / airport / hotel Wi-Fi — everyone on that network could reach your laptop.
-- **Do not expose it to the internet.** No router port-forwarding, no public IP,
-  no ngrok. LAN only.
-- **It's plain HTTP.** Logins cross the Wi-Fi unencrypted (there's no TLS on the
-  laptop). Acceptable for a short course on a trusted network; don't use real/reused
-  passwords for student accounts.
-- **Change the superuser password** (`/_/`) before anyone connects, and don't ship
-  real secrets (S3 keys, worker tokens) to a laptop you carry around.
-- **Student data lives in `pb_data` on your laptop.** Treat it per your school's
-  policy and delete it when the session's done.
-- **Allow the firewall prompt for _Private_ networks only** (see §4), and **stop
-  nabu after the lesson** (`./nabu/nabu stop`).
+`nabu classroom` opens Nabu to **every device on the network**, and lets anyone
+who can reach it sign in by typing a name. That is fine in a room on a network
+you trust, and risky anywhere else.
 
-## 0 · Prerequisites
+- **Trusted Wi-Fi only.** Use the school or venue network, or a hotspot from your
+  own phone. **Never** use café, airport or hotel Wi-Fi.
+- **Never expose it to the internet.** No router port-forwarding and no tunnels.
+- **It is plain http.** Anything typed crosses the Wi-Fi unencrypted. Students
+  sign in with a name only, so there are no passwords to steal, but do not ask
+  them for anything private.
+- **Anyone in the room can type a classmate's name.** Fast login trades that
+  risk for speed. It works only while you run `nabu classroom`, only for
+  students, and only for a Session that is open.
+- **Keep secrets off the laptop.** Do not copy storage keys or worker tokens to a
+  machine you carry around.
+- **Student data lives in `pb_data/` on the laptop.** Handle it as your school's
+  policy says, and delete it when the course is over.
+- **Allow the firewall prompt for private networks only.**
 
-- Go 1.26+, Node 20+, git, and a clone of the repo.
-- Your laptop and the students' devices on the **same Wi-Fi**.
-- **Windows:** run **natively** (PowerShell) for this — students can reach a native
-  bind directly. Running inside WSL2 hides behind a NAT and needs extra
-  `netsh interface portproxy` / mirrored-networking to be LAN-reachable.
+## Before the lesson
 
-## 1 · Build
+You need the Nabu release on the laptop (see the [quickstart][install]) and the
+course folder. On **Windows**, run Nabu natively in PowerShell, not inside WSL:
+WSL sits behind its own network and students cannot reach it.
 
-```bash
-# macOS / Linux
-./nabu/scripts/build.sh          # SPA -> ./pb_public, then the Go binary
-```
-
-```powershell
-# Windows (PowerShell) — the two steps build.sh runs, natively
-cd nabu\web; npm ci; npm run build; cd ..\..
-go build -o nabu\nabu.exe .\nabu
-```
-
-## 2 · Seed content + accounts
+Check the laptop:
 
 ```bash
-./nabu/nabu seed                       # showcase content + demo accounts
-#   or point at your own courses:
-./nabu/nabu seed --content /path/to/courses
+nabu doctor --mode classroom
 ```
 
-Migrations apply automatically. The superuser (`admin@nabu.example`) is created only
-when `NABU_SUPERUSER_PW` is set at seed time — otherwise **create the first
-superuser** from the `/_/` page on first visit. Optionally import a course roster so
-students have logins (`password:` is import-only):
+It prints nothing when the laptop is ready. Otherwise each line says what to
+fix. It checks that:
+
+- the web app is built into the binary, so nothing needs downloading;
+- the laptop has an address on the room's network;
+- every agent job can run with no worker, or a worker answers.
+
+**Agents offline.** With no internet there is usually no agent worker. An agent
+job written with `sim_output_fallback: true` then shows the slide's authored
+`sim_output` instead of an error. See [agent fundamentals][agents]. To run real
+agents, start a worker on the laptop or the LAN and set `WORKER_HEALTH_URL`.
+
+**Sessions.** Students join a **Session**. `content/lesson-schedules.yaml` lists
+them; `nabu init` writes a practice Session with no dates, which is always open.
+For a real lesson, give each Session the window it is open for:
+
+```yaml
+lesson-schedules:
+  - lesson: first-lesson
+    sessions:
+      - name: Tuesday morning
+        enroll: { from: "2026-12-01 09:00:00Z", to: "2026-12-01 12:00:00Z" }
+```
+
+## Run the lesson
 
 ```bash
-./nabu/nabu users import --from /path/to/rosters/my-course.yaml --mode merge
+nabu classroom --export results.yaml
 ```
 
-(On Windows use `.\nabu\nabu.exe` in place of `./nabu/nabu`.)
+In one step it:
 
-## 3 · Find your laptop's Wi-Fi IP
+1. loads the course into the database (`--no-seed` skips this);
+2. switches on name-only sign-in (**fast login**) for this run only;
+3. warns about anything that will not work offline;
+4. serves on every network interface, on port 8090 (`--port` changes it);
+5. prints the address for students and a QR code to scan.
 
-Students will browse to `http://<this-ip>:8090`.
+The first time, your laptop asks whether to allow incoming connections:
+
+- **macOS:** choose *Allow*. Later: System Settings, Network, Firewall.
+- **Windows:** tick **Private networks** only, then *Allow*.
+- **Linux:** most desktops have no firewall on; if yours does, allow port 8090.
+
+Students join the same Wi-Fi, open the address (or scan the code), type their
+name and pick the Session. A student who types the same name again in the same
+Session gets their own work back.
+
+You can follow along at `http://127.0.0.1:8090` on the laptop itself.
+
+## After the lesson
+
+Press **Ctrl-C**. Nabu switches fast login off again and writes every student,
+and where each one got to, into `results.yaml` (or `.json`, or `.csv`). Without
+`--export` it prints the command to do it later:
 
 ```bash
-# macOS
-ipconfig getifaddr en0            # en0 is usually Wi-Fi; try en1 if blank
+nabu users export --role student --positions --out results.yaml
 ```
 
-```powershell
-# Windows
-ipconfig                          # read "IPv4 Address" under "Wireless LAN adapter Wi-Fi"
-```
+Then keep `pb_data/` for the next lesson, or delete it as your data policy says.
 
-```bash
-# Linux
-hostname -I | awk '{print $1}'
-```
+## When it goes wrong
 
-## 4 · Run it, bound to the LAN
+See [troubleshooting][trouble]. The most common problem is students who cannot
+reach the laptop: check they are on the same Wi-Fi, that you allowed the firewall
+prompt, and that the network does not keep devices apart. Many guest networks
+do; a phone hotspot avoids that.
 
-Bind to all interfaces (`0.0.0.0`) so the room can reach it — this is the one line
-that differs from a private local run:
-
-```bash
-# macOS / Linux
-./nabu/nabu serve --http 0.0.0.0:8090          # uses ./pb_data (the launch dir)
-```
-
-```powershell
-# Windows
-.\nabu\nabu.exe serve --http 0.0.0.0:8090 --dir nabu\pb_data
-```
-
-The first time, your OS asks to allow incoming connections:
-
-- **macOS:** System Settings → Network → Firewall → allow `nabu` to receive
-  connections.
-- **Windows:** the Defender Firewall pop-up → tick **Private networks** only, then
-  Allow.
-
-## 5 · Students log in
-
-Give the room the URL and their credentials:
-
-> **http://&lt;your-ip&gt;:8090**  (e.g. `http://192.168.1.42:8090`)
-
-They sign in and go. You administer at `http://<your-ip>:8090/_/` (or
-`http://127.0.0.1:8090/_/` on your own machine).
-
-## 6 · After the lesson
-
-```bash
-./nabu/nabu stop                  # graceful stop (reports sessions served)
-```
-
-Then handle `./pb_data` per your data policy (keep for the next lesson, or
-delete). If you want the agents too, run a local worker and point
-`WORKER_HEALTH_URL` at `http://127.0.0.1:8091/healthz` — but for a plain laptop
-course the simulated/offline paths are usually enough. Validate anything you're
-unsure of with the
-[agent deploy runbook](help:reference#agent-deploy); secrets
-guidance is in `docs/secrets.md`.
+[modes]: help:reference#deployment-modes
+[install]: help:getting-started#install
+[agents]: help:reference#agent-fundamentals
+[trouble]: help:reference#troubleshooting
