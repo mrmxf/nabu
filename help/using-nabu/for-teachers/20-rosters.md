@@ -184,6 +184,32 @@ signup:
 laptop with no uplink uses `nabu classroom` (name-only sign-in) instead. On a live
 course on Cloudflare the roster is a secret: see [The roster secret][live-roster].
 
+## Signing in with a room code
+
+Some school and university mail systems hold back emailed codes, so they never
+reach the student. A **room code** avoids email. Turn it on in the course's
+`nabu.yaml`:
+
+```yaml
+room_code_login: true
+```
+
+While a Session is open, the **Teacher** page shows a 6-digit code for each course,
+in large type, with a **Full screen** button for the classroom display. A student
+types their username (or email) and that code, and is signed in.
+
+- Only people on the roster, enrolled in that course as students, can use it.
+  Nobody else gets in, and no account is created.
+- Teachers and admins cannot use it: they sign in with an emailed code or a
+  password.
+- The code changes every 10 minutes, and the previous one still works, so a
+  student who is slow to type is not caught out. Five wrong tries in a row and a
+  name must wait 5 minutes.
+- It works only while one of the course's Sessions is open.
+
+The tradeoff: anyone who can see the screen and knows a classmate's username can
+sign in as them. Show the code in the room only, never in a recording or a chat.
+
 ## Importing a roster
 
 Only an **admin** can import a roster (it creates and changes accounts). You

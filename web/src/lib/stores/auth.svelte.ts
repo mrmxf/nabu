@@ -46,6 +46,28 @@ export async function signInCodesEnabled(): Promise<boolean> {
 	}
 }
 
+// roomCodesEnabled reports whether students may sign in with the code on the
+// teacher's screen (GET /api/auth/room-code; see nabu/internal/httpapi/roomcode.go).
+export async function roomCodesEnabled(): Promise<boolean> {
+	try {
+		const res = await pb.send<{ enabled: boolean }>('/api/auth/room-code', { method: 'GET' });
+		return !!res.enabled;
+	} catch {
+		return false;
+	}
+}
+
+// loginWithRoomCode signs a roster student in with their username (or email)
+// and the room code. The server answers like authWithPassword ({token,
+// record}), so the auth store is populated the same way.
+export async function loginWithRoomCode(identity: string, code: string): Promise<void> {
+	const res = await pb.send<{ token: string; record: RecordModel }>('/api/auth/room-code', {
+		method: 'POST',
+		body: { identity, code }
+	});
+	pb.authStore.save(res.token, res.record);
+}
+
 // classroomFastLogin signs a student in by name alone via POST
 // /api/classroom/login (see nabu/internal/httpapi/classroom.go). The server
 // creates the account on first use and mints the token, returning the same

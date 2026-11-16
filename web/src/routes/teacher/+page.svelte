@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import TeacherNotifications from '$lib/teacher/TeacherNotifications.svelte';
+	import RoomCodes from '$lib/teacher/RoomCodes.svelte';
 
 	// The teacher's home. Deliberately calm: anything urgent is in the notifications
 	// panel at the top, the dashboard is one click away, and the rest of the page is
@@ -20,6 +21,8 @@
 <h1><i class="fa-solid fa-chalkboard-user"></i> Teacher</h1>
 
 <TeacherNotifications />
+
+<RoomCodes />
 
 <div class="actions">
 	<a class="button" href="/teacher/dashboard/queues">

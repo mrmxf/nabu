@@ -75,12 +75,15 @@ type Config struct {
 	// ClassroomFastLogin turns on the name-only classroom sign-in (see
 	// internal/httpapi/classroom.go). Seeded into app_config
 	// `classroom_fast_login`; OFF unless explicitly enabled.
-	ClassroomFastLogin bool             `koanf:"classroom_fast_login"`
-	Signup             SignupConfig     `koanf:"signup"`
-	AI                 AIConfig         `koanf:"ai"`
-	Admin              AdminConfig      `koanf:"admin"`
-	Pocketbase         PocketbaseConfig `koanf:"pocketbase"`
-	Mail               MailConfig       `koanf:"mail"`
+	ClassroomFastLogin bool `koanf:"classroom_fast_login"`
+	// RoomCodeLogin lets roster students sign in with their username and the
+	// code on the teacher's page (see internal/httpapi/roomcode.go).
+	RoomCodeLogin bool             `koanf:"room_code_login"`
+	Signup        SignupConfig     `koanf:"signup"`
+	AI            AIConfig         `koanf:"ai"`
+	Admin         AdminConfig      `koanf:"admin"`
+	Pocketbase    PocketbaseConfig `koanf:"pocketbase"`
+	Mail          MailConfig       `koanf:"mail"`
 }
 
 // MailConfig is mail.* — how Nabu sends email (sign-in codes, verification,

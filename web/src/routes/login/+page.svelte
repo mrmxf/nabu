@@ -5,7 +5,9 @@
 		auth,
 		requestSignInCode,
 		loginWithCode,
-		signInCodesEnabled
+		signInCodesEnabled,
+		roomCodesEnabled,
+		loginWithRoomCode
 	} from '$lib/stores/auth.svelte';
 	import {
 		loadClassroomStatus,
@@ -62,6 +64,13 @@
 	// only way in and the "Create an account" link is hidden.
 	let signupOpen = $derived(setting('signup_enabled') !== 'false');
 
+	// Room codes: the student types their username and the code on the
+	// teacher's screen. When on, this form leads; the others are a click away.
+	let roomEnabled = $state(false);
+	let useRoom = $state(true);
+	let roomCode = $state('');
+	let roomMode = $derived(roomEnabled && useRoom);
+
 	// The code form is on screen: codes are on and the password form is not chosen.
 	let codeMode = $derived(codesEnabled && !usePassword);
 
@@ -81,7 +90,7 @@
 		loadSettings();
 		// find out whether this is a demo deployment (before prefilling demo creds)
 		// and whether a classroom fast login is on offer.
-		const [demo, classroom, codes] = await Promise.all([
+		const [demo, classroom, codes, room] = await Promise.all([
 			pb
 				.send<{
 					demo_mode: boolean;
@@ -90,9 +99,11 @@
 				}>('/api/demo/status', { method: 'GET' })
 				.catch(() => null),
 			loadClassroomStatus(true),
-			signInCodesEnabled()
+			signInCodesEnabled(),
+			roomCodesEnabled()
 		]);
 		codesEnabled = codes;
+		roomEnabled = room;
 		if (demo) {
 			demoMode = demo.demo_mode;
 			leftoverDemo = demo.demo_mode ? [] : (demo.present ?? []);
@@ -171,6 +182,37 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	// Room-code sign-in: username + the code on the classroom screen.
+	async function submitRoomCode(e: SubmitEvent) {
+		e.preventDefault();
+		error = '';
+		identity = identity.trim();
+		busy = true;
+		try {
+			await loginWithRoomCode(identity, roomCode.replace(/\s+/g, ''));
+			try {
+				localStorage.setItem(LAST_IDENTITY_KEY, identity);
+			} catch {
+				/* storage may be blocked (private mode); remembering is best-effort */
+			}
+			goto('/');
+		} catch (err) {
+			error =
+				err instanceof Error && /too many/i.test(err.message)
+					? 'Too many tries. Wait a few minutes, then try again.'
+					: 'That name and code did not work. Check the code on the screen, or ask your teacher.';
+		} finally {
+			busy = false;
+		}
+	}
+
+	// Leave the room-code form for an emailed code (or a password if codes are off).
+	function leaveRoom() {
+		useRoom = false;
+		usePassword = !codesEnabled;
+		error = '';
 	}
 
 	// Back to step 1, to fix the name or ask again.
@@ -273,7 +315,43 @@
 			<p class="muted">Use a seeded demo account to explore the course.</p>
 		{/if}
 
-		{#if codeMode && otpId}
+		{#if roomMode}
+			<form onsubmit={submitRoomCode}>
+				<label for="identity">Username or email</label>
+				<input
+					id="identity"
+					type="text"
+					bind:value={identity}
+					autocomplete="username"
+					autocapitalize="none"
+					autocorrect="off"
+					spellcheck="false"
+					required
+				/>
+				<label for="room-code">Code on the classroom screen</label>
+				<input
+					id="room-code"
+					type="text"
+					inputmode="numeric"
+					autocomplete="off"
+					maxlength="8"
+					bind:value={roomCode}
+					required
+				/>
+				{#if error}
+					<p class="error">{error}</p>
+				{/if}
+				<button type="submit" disabled={busy || !identity.trim() || !roomCode.trim()}>
+					{busy ? 'Signing in…' : 'Sign in'}
+				</button>
+			</form>
+			<p class="muted staff-link">
+				Not in the room?
+				<button type="button" class="pseudo" onclick={leaveRoom}>
+					{codesEnabled ? 'Email me a sign-in code' : 'Sign in with a password'}
+				</button>
+			</p>
+		{:else if codeMode && otpId}
 			<form onsubmit={submitCode}>
 				<p>
 					If <strong>{codeSentTo}</strong> has an account here, we have emailed a 6-digit code to
@@ -365,6 +443,15 @@
 					</button>
 				</p>
 			{/if}
+		{/if}
+
+		{#if roomEnabled && !roomMode}
+			<p class="muted staff-link">
+				In the classroom?
+				<button type="button" class="pseudo" onclick={() => ((useRoom = true), (error = ''))}>
+					Use the code on the screen
+				</button>
+			</p>
 		{/if}
 
 		{#if signupOpen}

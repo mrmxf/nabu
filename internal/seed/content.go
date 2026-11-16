@@ -50,6 +50,9 @@ var defaultSettings = []settingSeed{
 	// server enforces the same flag (see internal/httpapi/classroom.go). Default
 	// off — it is a password-less path and belongs to a supervised lesson only.
 	{"classroom_fast_login", "false"},
+	// Whether students may sign in with their username and the room code the
+	// teacher's page shows. Sourced from nabu-config.yaml `room_code_login`.
+	{"room_code_login", "false"},
 	// Whether the image agents' "make an image" (Stable Diffusion) surface is exposed.
 	// Sourced from nabu-config.yaml `ai.stable-diffusion.enabled` (see
 	// settingsWithConfig). "false" hides every image surface in the SPA and the

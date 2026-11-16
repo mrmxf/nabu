@@ -646,6 +646,7 @@ func setStatus(rec *core.Record, readiness string, cs content.ContentStatus, goL
 //   - signup_enabled       <- signup.enabled
 //   - demo_mode            <- demo_mode
 //   - classroom_fast_login <- classroom_fast_login
+//   - room_code_login      <- room_code_login
 //   - images_enabled       <- ai.stable-diffusion.enabled
 //
 // Falls back to the built-in defaults if the config can't be read.
@@ -670,6 +671,8 @@ func settingsWithConfig() []settingSeed {
 			out[i].Value = strconv.FormatBool(cfg.DemoMode)
 		case out[i].Key == "classroom_fast_login":
 			out[i].Value = strconv.FormatBool(cfg.ClassroomFastLogin)
+		case out[i].Key == "room_code_login":
+			out[i].Value = strconv.FormatBool(cfg.RoomCodeLogin)
 		case out[i].Key == "images_enabled":
 			out[i].Value = strconv.FormatBool(cfg.AI.StableDiffusion.Enabled)
 		}

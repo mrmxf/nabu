@@ -35,6 +35,11 @@ func Register(se *core.ServeEvent) {
 	// an email and mails a code to the email on record; the reply never reveals
 	// whether the account exists. See internal/httpapi/otp.go.
 	se.Router.POST("/api/auth/otp", otpRequestHandler)
+	// room-code sign-in — PUBLIC; a roster student + the code on the teacher's
+	// screen. Off unless app_config room_code_login is "true". See roomcode.go.
+	se.Router.GET("/api/auth/room-code", roomCodeStatusHandler)
+	se.Router.POST("/api/auth/room-code", roomCodeLoginHandler)
+	se.Router.GET("/api/room-codes", roomCodesHandler).BindFunc(requireStaff)
 	se.Router.GET("/api/classroom/status", classroomStatusHandler)
 	se.Router.POST("/api/classroom/login", classroomLoginHandler)
 	// agent server health — readable by any signed-in student (serverstatus widget).

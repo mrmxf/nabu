@@ -24,6 +24,7 @@ seeded from `internal/seed/content.go` and can be overridden per-run by the
 | `signup_enabled` | `true` | Whether anyone may create an account at `/signup`. Sourced from `signup.enabled`. When `false`, `nabu seed` also closes the users create rule, so only a roster import or a superuser creates accounts. Set it `false` on a public host. |
 | `demo_mode` | `true` | Whether `nabu seed` spawns the demo accounts (`rosters/demo/demo_mode.yaml`). Sourced from `demo_mode` in `nabu-config.yaml`. The login page reads it (with `/api/demo/status`) to warn when demo accounts linger while it is off. |
 | `classroom_fast_login` | `false` | Whether `/login` offers the name-only classroom sign-in. Sourced from `classroom_fast_login` in `nabu-config.yaml`. **Password-less** — turn it on for a supervised lesson and off afterwards. See [classroom-fast-login.md](../classroom-fast-login.md). |
+| `room_code_login` | `false` | Whether roster students may sign in with their username and the 6-digit room code the Teacher page shows for each course with an open Session. Sourced from `room_code_login`. No email, no account created, staff excluded; the code changes every 10 minutes. See `internal/httpapi/roomcode.go`. |
 
 The `site_logo`, `signup_require_email`, `demo_mode` and `classroom_fast_login`
 rows are seeded from `nabu-config.yaml` (`logopath`, `signup.require_email`,

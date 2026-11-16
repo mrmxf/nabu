@@ -55,6 +55,14 @@ course:
 #           normal form
 classroom_fast_login: false
 
+# ── Room codes ───────────────────────────────────────────────────────────────
+# Students on the roster sign in with their username (or email) and a 6-digit
+# code the teacher's page shows for each course with an open Session. The code
+# changes every 10 minutes. Nothing is emailed and no account is created; staff
+# cannot use it. Use it where emailed codes are blocked by school mail filters.
+# Seeded into the app_config `room_code_login` row (internal/httpapi/roomcode.go).
+room_code_login: false
+
 # ── Sign-up ──────────────────────────────────────────────────────────────────
 # Controls the public self-signup page (/signup). Seeded into the app_config
 # `signup_require_email` row by `nabu seed`, which the signup form reads.
