@@ -175,10 +175,14 @@ mail:
   api_key_env: BREVO_API_KEY      # the env var holding the key, never the key
   sender_name: Sample Lab
   sender_address: lab@nabu.example
+  sender_address_env: NABU_SENDER_EMAIL   # optional: its value replaces sender_address
+signup:
+  enabled: false                  # no "Create an account": the roster is the only way in
 ```
 
 `nabu doctor` fails if the key is missing. Codes need the internet, so a classroom
-laptop with no uplink uses `nabu classroom` (name-only sign-in) instead.
+laptop with no uplink uses `nabu classroom` (name-only sign-in) instead. On a live
+course on Cloudflare the roster is a secret: see [The roster secret][live-roster].
 
 ## Importing a roster
 
@@ -233,3 +237,5 @@ If your goal is to reproduce a *working system* — accounts that can log in
 immediately, with progress intact — you want a full **`backup`** (admin only),
 which restores password hashes and session state into a clean database. Rosters
 move *people* between courses; backups move a *system* between machines.
+
+[live-roster]: help:reference#live-roster

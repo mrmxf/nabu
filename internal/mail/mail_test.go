@@ -127,3 +127,19 @@ func TestFromConfig(t *testing.T) {
 		t.Errorf("Providers() = %v", got)
 	}
 }
+
+func TestSenderAddress(t *testing.T) {
+	cfg := embedfs.MailConfig{SenderAddress: "no-reply@nabu.example", SenderAddressEnv: "NABU_TEST_SENDER"}
+	t.Setenv("NABU_TEST_SENDER", "")
+	if got := SenderAddress(cfg); got != "no-reply@nabu.example" {
+		t.Errorf("unset env: %q, want sender_address", got)
+	}
+	t.Setenv("NABU_TEST_SENDER", "course@nabu.example")
+	if got := SenderAddress(cfg); got != "course@nabu.example" {
+		t.Errorf("set env: %q, want its value", got)
+	}
+	cfg.SenderAddressEnv = ""
+	if got := SenderAddress(cfg); got != "no-reply@nabu.example" {
+		t.Errorf("no env named: %q", got)
+	}
+}

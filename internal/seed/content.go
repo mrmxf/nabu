@@ -36,6 +36,10 @@ var defaultSettings = []settingSeed{
 	// nabu-config.yaml `signup.require_email` (see settingsWithConfig); "false" =
 	// email is optional. Stored as a string ("true"/"false") like every setting.
 	{"signup_require_email", "false"},
+	// Whether /login links "Create an account" and /signup accepts one. Sourced
+	// from nabu-config.yaml `signup.enabled`; seed also opens or closes the users
+	// create rule to match (see applySignupRule).
+	{"signup_enabled", "true"},
 	// Whether demo accounts are spawned. Sourced from nabu-config.yaml `demo_mode`
 	// (see settingsWithConfig). The login page reads this (with /api/demo/status)
 	// to warn when demo accounts linger while demo mode is off.

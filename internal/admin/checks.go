@@ -307,6 +307,10 @@ func checkEnv(v *validator, cfg *embedfs.Config, n needs) {
 		if p := cfg.Mail.Provider; p != "" {
 			if mail.Known(p) {
 				requireEnv(v, cfg.Mail.APIKeyEnv, "mail provider "+p)
+				if e := cfg.Mail.SenderAddressEnv; e != "" && !envSet(e) {
+					v.record(sevWarn, "mail sender env missing", "var", e,
+						"detail", "mail goes from mail.sender_address "+cfg.Mail.SenderAddress)
+				}
 			} else {
 				v.record(sevFail, "unknown mail provider", "provider", p,
 					"fix", "set mail.provider to one of "+strings.Join(mail.Providers(), ", ")+" in nabu.yaml")

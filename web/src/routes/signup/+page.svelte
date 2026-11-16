@@ -31,6 +31,8 @@
 	// Email is optional unless nabu-config.yaml sets signup.require_email: true
 	// (seeded into the signup_require_email setting). Default (missing) => optional.
 	let requireEmail = $derived(setting('signup_require_email') === 'true');
+	// signup.enabled: false closes self-signup (the server refuses it too).
+	let signupOpen = $derived(setting('signup_enabled') !== 'false');
 
 	// Live strength of the current password (empty password => a neutral 'None').
 	let strength = $derived(
@@ -110,59 +112,66 @@
 
 <div class="card signup">
 	<h2>Create an account</h2>
-	<p class="muted">Pick a username and a strong password to join the course.</p>
+	{#if !signupOpen}
+		<p>
+			Accounts on this course come from the teacher's list. If you are on it, sign in with
+			your username or email address.
+		</p>
+	{:else}
+		<p class="muted">Pick a username and a strong password to join the course.</p>
 
-	<form onsubmit={submit}>
-		<label for="username">Username</label>
-		<input
-			id="username"
-			type="text"
-			bind:value={username}
-			autocomplete="username"
-			autocapitalize="none"
-			autocorrect="off"
-			spellcheck="false"
-			placeholder="e.g. s7g1-alice"
-			required
-		/>
-		{#if username && !usernameOk}
-			<p class="field-hint bad">Letters, digits and hyphens only — no spaces.</p>
-		{/if}
+		<form onsubmit={submit}>
+			<label for="username">Username</label>
+			<input
+				id="username"
+				type="text"
+				bind:value={username}
+				autocomplete="username"
+				autocapitalize="none"
+				autocorrect="off"
+				spellcheck="false"
+				placeholder="e.g. s7g1-alice"
+				required
+			/>
+			{#if username && !usernameOk}
+				<p class="field-hint bad">Letters, digits and hyphens only — no spaces.</p>
+			{/if}
 
-		<label for="name">Display name</label>
-		<input id="name" type="text" bind:value={name} autocomplete="name" required />
+			<label for="name">Display name</label>
+			<input id="name" type="text" bind:value={name} autocomplete="name" required />
 
-		<label for="email">Email {#if !requireEmail}<small>optional</small>{/if}</label>
-		<input id="email" type="email" bind:value={email} autocomplete="email" required={requireEmail} />
+			<label for="email">Email {#if !requireEmail}<small>optional</small>{/if}</label>
+			<input id="email" type="email" bind:value={email} autocomplete="email" required={requireEmail} />
 
-		<label for="password">Password</label>
-		<PasswordInput id="password" bind:value={password} autocomplete="new-password" required />
-		{#if password}
-			<div class="meter" aria-hidden="true">
-				{#each [0, 1, 2, 3] as seg (seg)}
-					<span
-						class="seg {seg <= strength.id ? METER[strength.id].cls : ''}"
-						class:filled={seg <= strength.id}
-					></span>
-				{/each}
-			</div>
-			<p class="field-hint" class:bad={!strongEnough} class:good={strongEnough}>
-				Strength: {strength.value}{strongEnough ? '' : ' — needs Medium or Strong'}
-			</p>
-		{/if}
+			<label for="password">Password</label>
+			<PasswordInput id="password" bind:value={password} autocomplete="new-password" required />
+			{#if password}
+				<div class="meter" aria-hidden="true">
+					{#each [0, 1, 2, 3] as seg (seg)}
+						<span
+							class="seg {seg <= strength.id ? METER[strength.id].cls : ''}"
+							class:filled={seg <= strength.id}
+						></span>
+					{/each}
+				</div>
+				<p class="field-hint" class:bad={!strongEnough} class:good={strongEnough}>
+					Strength: {strength.value}{strongEnough ? '' : ' — needs Medium or Strong'}
+				</p>
+			{/if}
 
-		<label for="confirm">Confirm password</label>
-		<PasswordInput id="confirm" bind:value={confirm} autocomplete="new-password" required />
-		{#if confirm && !match}
-			<p class="field-hint bad">Passwords don't match.</p>
-		{/if}
+			<label for="confirm">Confirm password</label>
+			<PasswordInput id="confirm" bind:value={confirm} autocomplete="new-password" required />
+			{#if confirm && !match}
+				<p class="field-hint bad">Passwords don't match.</p>
+			{/if}
 
-		{#if error}
-			<p class="error">{error}</p>
-		{/if}
+			{#if error}
+				<p class="error">{error}</p>
+			{/if}
 
-		<button type="submit" disabled={!canSubmit}>{busy ? 'Creating…' : 'Create account'}</button>
-	</form>
+			<button type="submit" disabled={!canSubmit}>{busy ? 'Creating…' : 'Create account'}</button>
+		</form>
+	{/if}
 
 	<p class="muted hint">Already have an account? <a href="/login">Sign in</a>.</p>
 </div>

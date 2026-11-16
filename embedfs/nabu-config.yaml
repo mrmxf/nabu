@@ -59,6 +59,10 @@ classroom_fast_login: false
 # Controls the public self-signup page (/signup). Seeded into the app_config
 # `signup_require_email` row by `nabu seed`, which the signup form reads.
 signup:
+  # Whether anyone may create an account at /signup.
+  #   true  — the login page links "Create an account" (laptop, demo)
+  #   false — accounts come only from a roster import; set this on a public host
+  enabled: true
   # Whether a new account must supply an email address.
   #   false — email is OPTIONAL; a student can sign up with just a username + password
   #   true  — email is required (e.g. once email verification / password reset is on)
@@ -122,6 +126,7 @@ pocketbase:
     tls: true
     sender_name: Nabu
     sender_address: no-reply@nabu.example
+  sender_address_env: ""  # e.g. NABU_SENDER_EMAIL: its value, when set, replaces sender_address
 
   # Settings > Backups — automatic backups to an S3-compatible store. The secret
   # key comes from the named env var; the access-key id is an identifier, not a
@@ -150,3 +155,4 @@ mail:
   endpoint: ""            # empty = the provider's default API URL
   sender_name: Nabu
   sender_address: no-reply@nabu.example
+  sender_address_env: ""  # e.g. NABU_SENDER_EMAIL: its value, when set, replaces sender_address

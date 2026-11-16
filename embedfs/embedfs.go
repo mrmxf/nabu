@@ -97,6 +97,9 @@ type MailConfig struct {
 	// SenderName and SenderAddress are the From of every message.
 	SenderName    string `koanf:"sender_name"`
 	SenderAddress string `koanf:"sender_address"`
+	// SenderAddressEnv, when set, names an env var whose value replaces
+	// SenderAddress, so a deployment can keep its real sender out of git.
+	SenderAddressEnv string `koanf:"sender_address_env"`
 }
 
 // CourseConfig is the course.* subtree — where a course keeps its files. Every
@@ -136,6 +139,10 @@ type AIBackend struct {
 // SignupConfig is the signup.* subtree — behaviour of the public self-signup
 // page. Seeded into app_config so the SPA can read it.
 type SignupConfig struct {
+	// Enabled controls public self-signup. false hides the "Create an account"
+	// link and closes the users create rule, so only a roster import (or a
+	// superuser) creates accounts: the roster is the allow-list.
+	Enabled bool `koanf:"enabled"`
 	// RequireEmail controls whether a new account must supply an email address.
 	// false => email is optional (username + password is enough).
 	RequireEmail bool `koanf:"require_email"`

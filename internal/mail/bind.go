@@ -31,8 +31,19 @@ func FromConfig(cfg embedfs.MailConfig) (Sender, error) {
 		Provider: cfg.Provider,
 		APIKey:   key,
 		Endpoint: cfg.Endpoint,
-		From:     mail.Address{Name: cfg.SenderName, Address: cfg.SenderAddress},
+		From:     mail.Address{Name: cfg.SenderName, Address: SenderAddress(cfg)},
 	})
+}
+
+// SenderAddress is the From address: the value of mail.sender_address_env when
+// that names a set env var, else mail.sender_address.
+func SenderAddress(cfg embedfs.MailConfig) string {
+	if cfg.SenderAddressEnv != "" {
+		if v := os.Getenv(cfg.SenderAddressEnv); v != "" {
+			return v
+		}
+	}
+	return cfg.SenderAddress
 }
 
 // Bind routes every email PocketBase sends through the provider named in the
@@ -87,5 +98,8 @@ func Report() {
 			"fix", "set "+cfg.Mail.APIKeyEnv+" (e.g. infisical run -- nabu serve), or fix mail.provider in nabu.yaml")
 		return
 	}
-	slog.Info("mail through provider API", "provider", cfg.Mail.Provider, "from", cfg.Mail.SenderAddress)
+	if e := cfg.Mail.SenderAddressEnv; e != "" && os.Getenv(e) == "" {
+		slog.Warn("mail sender env var is empty: using mail.sender_address", "var", e, "from", cfg.Mail.SenderAddress)
+	}
+	slog.Info("mail through provider API", "provider", cfg.Mail.Provider, "from", SenderAddress(cfg.Mail))
 }

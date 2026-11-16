@@ -18,6 +18,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import PasswordInput from '$lib/components/PasswordInput.svelte';
+	import { loadSettings, setting } from '$lib/stores/settings.svelte';
 
 	// Remembered across visits so a returning student doesn't retype their handle.
 	// Only the identity (username/email) is stored — never the password.
@@ -56,6 +57,11 @@
 	let otpId = $state('');
 	let code = $state('');
 	let codeSentTo = $state('');
+	// Self-signup is open unless the course config closes it (signup.enabled:
+	// false, seeded into the signup_enabled setting): then the roster is the
+	// only way in and the "Create an account" link is hidden.
+	let signupOpen = $derived(setting('signup_enabled') !== 'false');
+
 	// The code form is on screen: codes are on and the password form is not chosen.
 	let codeMode = $derived(codesEnabled && !usePassword);
 
@@ -72,6 +78,7 @@
 			goto('/');
 			return;
 		}
+		loadSettings();
 		// find out whether this is a demo deployment (before prefilling demo creds)
 		// and whether a classroom fast login is on offer.
 		const [demo, classroom, codes] = await Promise.all([
@@ -360,7 +367,9 @@
 			{/if}
 		{/if}
 
-		<p class="muted signup-link">New here? <a href="/signup">Create an account</a>.</p>
+		{#if signupOpen}
+			<p class="muted signup-link">New here? <a href="/signup">Create an account</a>.</p>
+		{/if}
 
 		{#if classroomEnabled}
 			<p class="muted staff-link">

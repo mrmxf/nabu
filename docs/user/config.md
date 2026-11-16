@@ -21,6 +21,7 @@ seeded from `internal/seed/content.go` and can be overridden per-run by the
 | `app_name` | `Nabu` | Name shown in the navbar and page title. Sourced from `pocketbase.app.name` in `nabu-config.yaml`. |
 | `github_review_url` | `https://github.com/mrmxf/nabu` | "Review us" target for the help ShareBar. |
 | `signup_require_email` | `false` | Whether `/signup` requires an email. Sourced from `signup.require_email` in `nabu-config.yaml`. |
+| `signup_enabled` | `true` | Whether anyone may create an account at `/signup`. Sourced from `signup.enabled`. When `false`, `nabu seed` also closes the users create rule, so only a roster import or a superuser creates accounts. Set it `false` on a public host. |
 | `demo_mode` | `true` | Whether `nabu seed` spawns the demo accounts (`rosters/demo/demo_mode.yaml`). Sourced from `demo_mode` in `nabu-config.yaml`. The login page reads it (with `/api/demo/status`) to warn when demo accounts linger while it is off. |
 | `classroom_fast_login` | `false` | Whether `/login` offers the name-only classroom sign-in. Sourced from `classroom_fast_login` in `nabu-config.yaml`. **Password-less** — turn it on for a supervised lesson and off afterwards. See [classroom-fast-login.md](../classroom-fast-login.md). |
 
@@ -115,7 +116,9 @@ enabled.
 verification, password resets) through a provider's HTTP API instead of SMTP:
 `provider` is `brevo` or `mailtrap` (`internal/mail`; add one there),
 `api_key_env` names the env var holding the key, `endpoint` overrides the API URL,
-and `sender_name`/`sender_address` are the From of every message. An empty
+and `sender_name`/`sender_address` are the From of every message.
+`sender_address_env` names an env var (e.g. `NABU_SENDER_EMAIL`) whose value,
+when set, replaces `sender_address`, so the real sender stays out of git. An empty
 `provider` leaves PocketBase's own mailer in charge. `nabu admin validate` fails
 when the provider is unknown or its key is missing; `nabu serve` logs which way
 mail goes. The sign-in email names `app.name`, so apply settings once.

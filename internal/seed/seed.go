@@ -224,6 +224,9 @@ func Run(app core.App, p Paths, src Sources, renderer string, strict bool) error
 		return err
 	}
 	slog.Info("seeded settings", "count", len(defaultSettings))
+	if err := applySignupRule(app, signupEnabled()); err != nil {
+		return err
+	}
 	slog.Info("seed complete", "demo_mode", demoMode)
 	return nil
 }
@@ -640,6 +643,7 @@ func setStatus(rec *core.Record, readiness string, cs content.ContentStatus, goL
 // from the embedded nabu-config.yaml, so those defaults are config-driven:
 //   - site_logo            <- logopath
 //   - signup_require_email <- signup.require_email
+//   - signup_enabled       <- signup.enabled
 //   - demo_mode            <- demo_mode
 //   - classroom_fast_login <- classroom_fast_login
 //   - images_enabled       <- ai.stable-diffusion.enabled
@@ -660,6 +664,8 @@ func settingsWithConfig() []settingSeed {
 			out[i].Value = cfg.Logopath
 		case out[i].Key == "signup_require_email":
 			out[i].Value = strconv.FormatBool(cfg.Signup.RequireEmail)
+		case out[i].Key == "signup_enabled":
+			out[i].Value = strconv.FormatBool(cfg.Signup.Enabled)
 		case out[i].Key == "demo_mode":
 			out[i].Value = strconv.FormatBool(cfg.DemoMode)
 		case out[i].Key == "classroom_fast_login":
@@ -688,6 +694,44 @@ func upsertSettings(app core.App, items []settingSeed) error {
 			return fmt.Errorf("save setting %s: %w", s.Key, err)
 		}
 	}
+	return nil
+}
+
+// signupCreateRule is the users create rule while self-signup is open: a public
+// caller may mint only an ordinary student with a username (migration 1751000016).
+const signupCreateRule = `@request.body.role = "student" && @request.body.uid != ""`
+
+// signupEnabled reads signup.enabled; a config read failure keeps signup open,
+// the behaviour of every Nabu before the switch existed.
+func signupEnabled() bool {
+	cfg, err := embedfs.LoadConfig()
+	if err != nil {
+		return true
+	}
+	return cfg.Signup.Enabled
+}
+
+// applySignupRule opens or closes public self-signup on the users collection.
+// Closed (nil rule) means only superusers and server code create accounts:
+// roster imports, the seeder and classroom fast login are unaffected.
+func applySignupRule(app core.App, enabled bool) error {
+	users, err := app.FindCollectionByNameOrId("users")
+	if err != nil {
+		return fmt.Errorf("find users collection: %w", err)
+	}
+	var want *string
+	if enabled {
+		want = types.Pointer(signupCreateRule)
+	}
+	cur := users.CreateRule
+	if (cur == nil && want == nil) || (cur != nil && want != nil && *cur == *want) {
+		return nil
+	}
+	users.CreateRule = want
+	if err := app.Save(users); err != nil {
+		return fmt.Errorf("set users create rule: %w", err)
+	}
+	slog.Info("self-signup", "enabled", enabled)
 	return nil
 }
 

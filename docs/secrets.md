@@ -43,6 +43,7 @@ Five vars are secrets (marked 🔒); the rest are plain config.
 | `WORKER_DISPATCH_TIMEOUT` | opt | 90s | one job's timeout (Go duration); keep under 100s for a worker behind Cloudflare |
 | `NABU_SUPERUSER_PW` 🔒 | opt | — (empty ⇒ superuser not seeded) | dashboard `_superusers` password, read by `nabu seed` / `nabu users import` for a `role: superuser` roster entry. Seed/import-time only — not needed to `serve` |
 | `NABU_MAIL_API_KEY` 🔒 | opt (req when `mail.provider` is set) | — | the mail provider's API key (Brevo `api-key`, Mailtrap bearer). The env var name is `mail.api_key_env`, so a course may call it e.g. `BREVO_API_KEY` |
+| `NABU_SENDER_EMAIL` | opt | `mail.sender_address` | the From address of every email, verified with the mail provider. The env var name is `mail.sender_address_env`; nothing reads it unless that is set |
 | `AGENT_MAX_TTL` | opt | 120 | job TTL ceiling (seconds) |
 | `S3_ENDPOINT` | req (resources) | — | S3 endpoint; unset ⇒ resource endpoints `503` |
 | `S3_REGION` | opt | us-east-1 | any value SigV4 accepts |
