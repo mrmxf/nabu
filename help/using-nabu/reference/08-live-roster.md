@@ -46,14 +46,15 @@ That is all a sign-in needs: no passwords, because every sign-in is an emailed c
 | `courses` | The course slug. For more than one, separate them with `;`, not `,`. |
 
 Nabu makes each person's **username** from the part of their email before the `@`:
-`alice@nabu.example` signs in as `alice`, or with the full email. If two people
-share that part (`sam@a.nabu.example` and `sam@b.nabu.example`), add a `uid` column and
-give each a username of your own, or the import skips the second one:
+`alice@nabu.example` signs in as `alice`, or with the full email. Dots become
+hyphens, so `sam.lee@nabu.example` and `sam-lee@nabu.example` would both be
+`sam-lee`. When two people would share a username, add a `uid` column and give
+each a username of your own, or the import skips the second one:
 
 ```csv
 uid,email,name,role,courses
-sam-a,sam@a.nabu.example,Sam A,student,sample-lab
-sam-b,sam@b.nabu.example,Sam B,student,sample-lab
+sam-lee,sam.lee@nabu.example,Sam Lee,student,sample-lab
+sam-lee-2,sam-lee@nabu.example,Sam Lee,student,sample-lab
 ```
 
 ## What each import does
@@ -83,7 +84,7 @@ It prints a summary, then one `error:` line for each skipped row:
 
 ```text
 created=4 updated=0 enrolled=3 unenrolled=0 deleted=0 superusers=0 skipped=0
-  error: sam@b.nabu.example: save user: uid: Value must be unique.
+  error: sam-lee@nabu.example: save user: uid: Value must be unique.
   error: bob@nabu.example: unknown course "no-such-course"
 ```
 
